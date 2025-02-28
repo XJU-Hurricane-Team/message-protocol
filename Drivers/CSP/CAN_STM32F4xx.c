@@ -1,10 +1,9 @@
-
 /**
  * @file    CAN_STM32F4xx.c
  * @author  Deadline039
  * @brief   Chip Support Package of FDCAN on STM32F4xx
  * @version 1.0
- * @date    2025-02-02
+ * @date    2025-02-27
  * @note    We will support FDCAN in the feature.
  *          Generate Automatically. 
  */
@@ -80,7 +79,7 @@ uint8_t can1_init(uint32_t baud_rate, uint32_t prop_delay) {
     can_filter_config.FilterActivation = CAN_FILTER_ENABLE;
     can_filter_config.SlaveStartFilterBank = 0;
 
-#if CAN1_ENABLE_RX0_IT
+#if CAN1_RX0_IT_ENABLE
     can_filter_config.FilterFIFOAssignment = CAN_FILTER_FIFO0;
     if (HAL_CAN_ConfigFilter(&can1_handle, &can_filter_config) != HAL_OK) {
         return CAN_INIT_FILTER_FAIL;
@@ -89,9 +88,9 @@ uint8_t can1_init(uint32_t baud_rate, uint32_t prop_delay) {
                                      CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
         return CAN_INIT_NOTIFY_FAIL;
     }
-#endif /* CAN1_ENABLE_RX0_IT */
+#endif /* CAN1_RX0_IT_ENABLE */
 
-#if CAN1_ENABLE_RX1_IT
+#if CAN1_RX1_IT_ENABLE
     can_filter_config.FilterFIFOAssignment = CAN_FILTER_FIFO1;
     if (HAL_CAN_ConfigFilter(&can1_handle, &can_filter_config) != HAL_OK) {
         return CAN_INIT_FILTER_FAIL;
@@ -100,7 +99,7 @@ uint8_t can1_init(uint32_t baud_rate, uint32_t prop_delay) {
                                      CAN_IT_RX_FIFO1_MSG_PENDING) != HAL_OK) {
         return CAN_INIT_NOTIFY_FAIL;
     }
-#endif /* CAN1_ENABLE_RX1_IT */
+#endif /* CAN1_RX1_IT_ENABLE */
 
     if (HAL_CAN_Start(&can1_handle) != HAL_OK) {
         return CAN_INIT_START_FAIL;
@@ -109,7 +108,7 @@ uint8_t can1_init(uint32_t baud_rate, uint32_t prop_delay) {
     return CAN_INIT_OK;
 }
 
-#if CAN1_ENABLE_TX_IT
+#if CAN1_TX_IT_ENABLE
 
 /**
  * @brief CAN1 TX ISR.
@@ -119,9 +118,9 @@ void CAN1_TX_IRQHandler(void) {
     HAL_CAN_IRQHandler(&can1_handle);
 }
 
-#endif /* CAN1_ENABLE_TX_IT */
+#endif /* CAN1_TX_IT_ENABLE */
 
-#if CAN1_ENABLE_RX0_IT
+#if CAN1_RX0_IT_ENABLE
 
 /**
  * @brief CAN1 RX FIFO0 ISR.
@@ -131,9 +130,9 @@ void CAN1_RX0_IRQHandler(void) {
     HAL_CAN_IRQHandler(&can1_handle);
 }
 
-#endif /* CAN1_ENABLE_RX0_IT */
+#endif /* CAN1_RX0_IT_ENABLE */
 
-#if CAN1_ENABLE_RX1_IT
+#if CAN1_RX1_IT_ENABLE
 
 /**
  * @brief CAN1 RX FIFO1 ISR.
@@ -143,9 +142,9 @@ void CAN1_RX1_IRQHandler(void) {
     HAL_CAN_IRQHandler(&can1_handle);
 }
 
-#endif /* CAN1_ENABLE_RX1_IT */
+#endif /* CAN1_RX1_IT_ENABLE */
 
-#if CAN1_ENABLE_SCE_IT
+#if CAN1_SCE_IT_ENABLE
 
 /**
  * @brief CAN1 SCE ISR.
@@ -155,7 +154,7 @@ void CAN1_SCE_IRQHandler(void) {
     HAL_CAN_IRQHandler(&can1_handle);
 }
 
-#endif /* CAN1_ENABLE_SCE_IT */
+#endif /* CAN1_SCE_IT_ENABLE */
 
 /**
  * @brief CAN1 deinitialization.
@@ -253,7 +252,7 @@ uint8_t can2_init(uint32_t baud_rate, uint32_t prop_delay) {
     can_filter_config.FilterActivation = CAN_FILTER_ENABLE;
     can_filter_config.SlaveStartFilterBank = 0;
 
-#if CAN2_ENABLE_RX0_IT
+#if CAN2_RX0_IT_ENABLE
     can_filter_config.FilterFIFOAssignment = CAN_FILTER_FIFO0;
     if (HAL_CAN_ConfigFilter(&can2_handle, &can_filter_config) != HAL_OK) {
         return CAN_INIT_FILTER_FAIL;
@@ -262,9 +261,9 @@ uint8_t can2_init(uint32_t baud_rate, uint32_t prop_delay) {
                                      CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
         return CAN_INIT_NOTIFY_FAIL;
     }
-#endif /* CAN2_ENABLE_RX0_IT */
+#endif /* CAN2_RX0_IT_ENABLE */
 
-#if CAN2_ENABLE_RX1_IT
+#if CAN2_RX1_IT_ENABLE
     can_filter_config.FilterFIFOAssignment = CAN_FILTER_FIFO1;
     if (HAL_CAN_ConfigFilter(&can2_handle, &can_filter_config) != HAL_OK) {
         return CAN_INIT_FILTER_FAIL;
@@ -273,7 +272,7 @@ uint8_t can2_init(uint32_t baud_rate, uint32_t prop_delay) {
                                      CAN_IT_RX_FIFO1_MSG_PENDING) != HAL_OK) {
         return CAN_INIT_NOTIFY_FAIL;
     }
-#endif /* CAN2_ENABLE_RX1_IT */
+#endif /* CAN2_RX1_IT_ENABLE */
 
     if (HAL_CAN_Start(&can2_handle) != HAL_OK) {
         return CAN_INIT_START_FAIL;
@@ -282,7 +281,7 @@ uint8_t can2_init(uint32_t baud_rate, uint32_t prop_delay) {
     return CAN_INIT_OK;
 }
 
-#if CAN2_ENABLE_TX_IT
+#if CAN2_TX_IT_ENABLE
 
 /**
  * @brief CAN2 TX ISR.
@@ -292,9 +291,9 @@ void CAN2_TX_IRQHandler(void) {
     HAL_CAN_IRQHandler(&can2_handle);
 }
 
-#endif /* CAN2_ENABLE_TX_IT */
+#endif /* CAN2_TX_IT_ENABLE */
 
-#if CAN2_ENABLE_RX0_IT
+#if CAN2_RX0_IT_ENABLE
 
 /**
  * @brief CAN2 RX FIFO0 ISR.
@@ -304,9 +303,9 @@ void CAN2_RX0_IRQHandler(void) {
     HAL_CAN_IRQHandler(&can2_handle);
 }
 
-#endif /* CAN2_ENABLE_RX0_IT */
+#endif /* CAN2_RX0_IT_ENABLE */
 
-#if CAN2_ENABLE_RX1_IT
+#if CAN2_RX1_IT_ENABLE
 
 /**
  * @brief CAN2 RX FIFO1 ISR.
@@ -316,9 +315,9 @@ void CAN2_RX1_IRQHandler(void) {
     HAL_CAN_IRQHandler(&can2_handle);
 }
 
-#endif /* CAN2_ENABLE_RX1_IT */
+#endif /* CAN2_RX1_IT_ENABLE */
 
-#if CAN2_ENABLE_SCE_IT
+#if CAN2_SCE_IT_ENABLE
 
 /**
  * @brief CAN2 SCE ISR.
@@ -328,7 +327,7 @@ void CAN2_SCE_IRQHandler(void) {
     HAL_CAN_IRQHandler(&can2_handle);
 }
 
-#endif /* CAN2_ENABLE_SCE_IT */
+#endif /* CAN2_SCE_IT_ENABLE */
 
 /**
  * @brief CAN2 deinitialization.
@@ -426,7 +425,7 @@ uint8_t can3_init(uint32_t baud_rate, uint32_t prop_delay) {
     can_filter_config.FilterActivation = CAN_FILTER_ENABLE;
     can_filter_config.SlaveStartFilterBank = 0;
 
-#if CAN3_ENABLE_RX0_IT
+#if CAN3_RX0_IT_ENABLE
     can_filter_config.FilterFIFOAssignment = CAN_FILTER_FIFO0;
     if (HAL_CAN_ConfigFilter(&can3_handle, &can_filter_config) != HAL_OK) {
         return CAN_INIT_FILTER_FAIL;
@@ -435,9 +434,9 @@ uint8_t can3_init(uint32_t baud_rate, uint32_t prop_delay) {
                                      CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
         return CAN_INIT_NOTIFY_FAIL;
     }
-#endif /* CAN3_ENABLE_RX0_IT */
+#endif /* CAN3_RX0_IT_ENABLE */
 
-#if CAN3_ENABLE_RX1_IT
+#if CAN3_RX1_IT_ENABLE
     can_filter_config.FilterFIFOAssignment = CAN_FILTER_FIFO1;
     if (HAL_CAN_ConfigFilter(&can3_handle, &can_filter_config) != HAL_OK) {
         return CAN_INIT_FILTER_FAIL;
@@ -446,7 +445,7 @@ uint8_t can3_init(uint32_t baud_rate, uint32_t prop_delay) {
                                      CAN_IT_RX_FIFO1_MSG_PENDING) != HAL_OK) {
         return CAN_INIT_NOTIFY_FAIL;
     }
-#endif /* CAN3_ENABLE_RX1_IT */
+#endif /* CAN3_RX1_IT_ENABLE */
 
     if (HAL_CAN_Start(&can3_handle) != HAL_OK) {
         return CAN_INIT_START_FAIL;
@@ -455,7 +454,7 @@ uint8_t can3_init(uint32_t baud_rate, uint32_t prop_delay) {
     return CAN_INIT_OK;
 }
 
-#if CAN3_ENABLE_TX_IT
+#if CAN3_TX_IT_ENABLE
 
 /**
  * @brief CAN3 TX ISR.
@@ -465,9 +464,9 @@ void CAN3_TX_IRQHandler(void) {
     HAL_CAN_IRQHandler(&can3_handle);
 }
 
-#endif /* CAN3_ENABLE_TX_IT */
+#endif /* CAN3_TX_IT_ENABLE */
 
-#if CAN3_ENABLE_RX0_IT
+#if CAN3_RX0_IT_ENABLE
 
 /**
  * @brief CAN3 RX FIFO0 ISR.
@@ -477,9 +476,9 @@ void CAN3_RX0_IRQHandler(void) {
     HAL_CAN_IRQHandler(&can3_handle);
 }
 
-#endif /* CAN3_ENABLE_RX0_IT */
+#endif /* CAN3_RX0_IT_ENABLE */
 
-#if CAN3_ENABLE_RX1_IT
+#if CAN3_RX1_IT_ENABLE
 
 /**
  * @brief CAN3 RX FIFO1 ISR.
@@ -489,9 +488,9 @@ void CAN3_RX1_IRQHandler(void) {
     HAL_CAN_IRQHandler(&can3_handle);
 }
 
-#endif /* CAN3_ENABLE_RX1_IT */
+#endif /* CAN3_RX1_IT_ENABLE */
 
-#if CAN3_ENABLE_SCE_IT
+#if CAN3_SCE_IT_ENABLE
 
 /**
  * @brief CAN3 SCE ISR.
@@ -501,7 +500,7 @@ void CAN3_SCE_IRQHandler(void) {
     HAL_CAN_IRQHandler(&can3_handle);
 }
 
-#endif /* CAN3_ENABLE_SCE_IT */
+#endif /* CAN3_SCE_IT_ENABLE */
 
 /**
  * @brief CAN3 deinitialization.
@@ -566,28 +565,28 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan) {
         HAL_GPIO_Init(CSP_GPIO_PORT(CAN3_RX_PORT), &gpio_init_struct);
         __HAL_RCC_CAN3_CLK_ENABLE();
 
-#if CAN3_ENABLE_TX_IT
+#if CAN3_TX_IT_ENABLE
         HAL_NVIC_SetPriority(CAN3_TX_IRQn, CAN3_TX_IT_PRIORITY, CAN3_TX_IT_SUB);
         HAL_NVIC_EnableIRQ(CAN3_TX_IRQn);
-#endif /* CAN3_ENABLE_TX_IT */
+#endif /* CAN3_TX_IT_ENABLE */
 
-#if CAN3_ENABLE_RX0_IT
+#if CAN3_RX0_IT_ENABLE
         HAL_NVIC_SetPriority(CAN3_RX0_IRQn, CAN3_RX0_IT_PRIORITY,
                              CAN3_RX0_IT_SUB);
         HAL_NVIC_EnableIRQ(CAN3_RX0_IRQn);
-#endif /* CAN3_ENABLE_RX0_IT */
+#endif /* CAN3_RX0_IT_ENABLE */
 
-#if CAN3_ENABLE_RX1_IT
+#if CAN3_RX1_IT_ENABLE
         HAL_NVIC_SetPriority(CAN3_RX1_IRQn, CAN3_RX1_IT_PRIORITY,
                              CAN3_RX1_IT_SUB);
         HAL_NVIC_EnableIRQ(CAN3_RX1_IRQn);
-#endif /* CAN3_ENABLE_RX1_IT */
+#endif /* CAN3_RX1_IT_ENABLE */
 
-#if CAN3_ENABLE_SCE_IT
+#if CAN3_SCE_IT_ENABLE
         HAL_NVIC_SetPriority(CAN3_SCE_IRQn, CAN3_SCE_IT_PRIORITY,
                              CAN3_SCE_IT_SUB);
         HAL_NVIC_EnableIRQ(CAN3_SCE_IRQn);
-#endif /* CAN3_ENABLE_SCE_IT */
+#endif /* CAN3_SCE_IT_ENABLE */
 
         return;
     }
@@ -606,25 +605,25 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan) {
     gpio_init_struct.Alternate = CAN1_RX_AF;
     HAL_GPIO_Init(CSP_GPIO_PORT(CAN1_RX_PORT), &gpio_init_struct);
 
-#if CAN1_ENABLE_TX_IT
+#if CAN1_TX_IT_ENABLE
     HAL_NVIC_SetPriority(CAN1_TX_IRQn, CAN1_TX_IT_PRIORITY, CAN1_TX_IT_SUB);
     HAL_NVIC_EnableIRQ(CAN1_TX_IRQn);
-#endif /* CAN1_ENABLE_TX_IT */
+#endif /* CAN1_TX_IT_ENABLE */
 
-#if CAN1_ENABLE_RX0_IT
+#if CAN1_RX0_IT_ENABLE
     HAL_NVIC_SetPriority(CAN1_RX0_IRQn, CAN1_RX0_IT_PRIORITY, CAN1_RX0_IT_SUB);
     HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
-#endif /* CAN1_ENABLE_RX0_IT */
+#endif /* CAN1_RX0_IT_ENABLE */
 
-#if CAN1_ENABLE_RX1_IT
+#if CAN1_RX1_IT_ENABLE
     HAL_NVIC_SetPriority(CAN1_RX1_IRQn, CAN1_RX1_IT_PRIORITY, CAN1_RX1_IT_SUB);
     HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
-#endif /* CAN1_ENABLE_RX1_IT */
+#endif /* CAN1_RX1_IT_ENABLE */
 
-#if CAN1_ENABLE_SCE_IT
+#if CAN1_SCE_IT_ENABLE
     HAL_NVIC_SetPriority(CAN1_SCE_IRQn, CAN1_SCE_IT_PRIORITY, CAN1_SCE_IT_SUB);
     HAL_NVIC_EnableIRQ(CAN1_SCE_IRQn);
-#endif /* CAN1_ENABLE_SCE_IT */
+#endif /* CAN1_SCE_IT_ENABLE */
 
 #endif /* CAN1_ENABLE */
 
@@ -642,25 +641,25 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan) {
     gpio_init_struct.Alternate = CAN2_RX_AF;
     HAL_GPIO_Init(CSP_GPIO_PORT(CAN2_RX_PORT), &gpio_init_struct);
 
-#if CAN2_ENABLE_TX_IT
+#if CAN2_TX_IT_ENABLE
     HAL_NVIC_SetPriority(CAN2_TX_IRQn, CAN2_TX_IT_PRIORITY, CAN2_TX_IT_SUB);
     HAL_NVIC_EnableIRQ(CAN2_TX_IRQn);
-#endif /* CAN2_ENABLE_TX_IT */
+#endif /* CAN2_TX_IT_ENABLE */
 
-#if CAN2_ENABLE_RX0_IT
+#if CAN2_RX0_IT_ENABLE
     HAL_NVIC_SetPriority(CAN2_RX0_IRQn, CAN2_RX0_IT_PRIORITY, CAN2_RX0_IT_SUB);
     HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
-#endif /* CAN2_ENABLE_RX0_IT */
+#endif /* CAN2_RX0_IT_ENABLE */
 
-#if CAN2_ENABLE_RX1_IT
+#if CAN2_RX1_IT_ENABLE
     HAL_NVIC_SetPriority(CAN2_RX1_IRQn, CAN2_RX1_IT_PRIORITY, CAN2_RX1_IT_SUB);
     HAL_NVIC_EnableIRQ(CAN2_RX1_IRQn);
-#endif /* CAN2_ENABLE_RX1_IT */
+#endif /* CAN2_RX1_IT_ENABLE */
 
-#if CAN2_ENABLE_SCE_IT
+#if CAN2_SCE_IT_ENABLE
     HAL_NVIC_SetPriority(CAN2_SCE_IRQn, CAN2_SCE_IT_PRIORITY, CAN2_SCE_IT_SUB);
     HAL_NVIC_EnableIRQ(CAN2_SCE_IRQn);
-#endif /* CAN2_ENABLE_SCE_IT */
+#endif /* CAN2_SCE_IT_ENABLE */
 
 #endif /* CAN2_ENABLE */
 }
@@ -679,21 +678,21 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef *hcan) {
         HAL_GPIO_DeInit(CSP_GPIO_PORT(CAN1_RX_PORT), CAN1_RX_PIN);
         HAL_GPIO_DeInit(CSP_GPIO_PORT(CAN1_TX_PORT), CAN1_TX_PIN);
 
-#if CAN1_ENABLE_TX_IT
+#if CAN1_TX_IT_ENABLE
         HAL_NVIC_DisableIRQ(CAN1_TX_IRQn);
-#endif /* CAN1_ENABLE_TX_IT */
+#endif /* CAN1_TX_IT_ENABLE */
 
-#if CAN1_ENABLE_RX0_IT
+#if CAN1_RX0_IT_ENABLE
         HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
-#endif /* CAN1_ENABLE_RX0_IT */
+#endif /* CAN1_RX0_IT_ENABLE */
 
-#if CAN1_ENABLE_RX1_IT
+#if CAN1_RX1_IT_ENABLE
         HAL_NVIC_DisableIRQ(CAN1_RX1_IRQn);
-#endif /* CAN1_ENABLE_RX1_IT */
+#endif /* CAN1_RX1_IT_ENABLE */
 
-#if CAN1_ENABLE_SCE_IT
+#if CAN1_SCE_IT_ENABLE
         HAL_NVIC_DisableIRQ(CAN1_SCE_IRQn);
-#endif /* CAN1_ENABLE_SCE_IT */
+#endif /* CAN1_SCE_IT_ENABLE */
     }
 #endif /* CAN1_ENABLE */
 
@@ -704,21 +703,21 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef *hcan) {
         HAL_GPIO_DeInit(CSP_GPIO_PORT(CAN2_RX_PORT), CAN2_RX_PIN);
         HAL_GPIO_DeInit(CSP_GPIO_PORT(CAN2_TX_PORT), CAN2_TX_PIN);
 
-#if CAN2_ENABLE_TX_IT
+#if CAN2_TX_IT_ENABLE
         HAL_NVIC_DisableIRQ(CAN2_TX_IRQn);
-#endif /* CAN2_ENABLE_TX_IT */
+#endif /* CAN2_TX_IT_ENABLE */
 
-#if CAN2_ENABLE_RX0_IT
+#if CAN2_RX0_IT_ENABLE
         HAL_NVIC_DisableIRQ(CAN2_RX0_IRQn);
-#endif /* CAN2_ENABLE_RX0_IT */
+#endif /* CAN2_RX0_IT_ENABLE */
 
-#if CAN2_ENABLE_RX1_IT
+#if CAN2_RX1_IT_ENABLE
         HAL_NVIC_DisableIRQ(CAN2_RX1_IRQn);
-#endif /* CAN2_ENABLE_RX1_IT */
+#endif /* CAN2_RX1_IT_ENABLE */
 
-#if CAN2_ENABLE_SCE_IT
+#if CAN2_SCE_IT_ENABLE
         HAL_NVIC_DisableIRQ(CAN2_SCE_IRQn);
-#endif /* CAN2_ENABLE_SCE_IT */
+#endif /* CAN2_SCE_IT_ENABLE */
     }
 #endif /* CAN2_ENABLE */
 
@@ -729,21 +728,21 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef *hcan) {
         HAL_GPIO_DeInit(CSP_GPIO_PORT(CAN3_RX_PORT), CAN3_RX_PIN);
         HAL_GPIO_DeInit(CSP_GPIO_PORT(CAN3_TX_PORT), CAN3_TX_PIN);
 
-#if CAN3_ENABLE_TX_IT
+#if CAN3_TX_IT_ENABLE
         HAL_NVIC_DisableIRQ(CAN3_TX_IRQn);
-#endif /* CAN3_ENABLE_TX_IT */
+#endif /* CAN3_TX_IT_ENABLE */
 
-#if CAN3_ENABLE_RX0_IT
+#if CAN3_RX0_IT_ENABLE
         HAL_NVIC_DisableIRQ(CAN3_RX0_IRQn);
-#endif /* CAN3_ENABLE_RX0_IT */
+#endif /* CAN3_RX0_IT_ENABLE */
 
-#if CAN3_ENABLE_RX1_IT
+#if CAN3_RX1_IT_ENABLE
         HAL_NVIC_DisableIRQ(CAN3_RX1_IRQn);
-#endif /* CAN3_ENABLE_RX1_IT */
+#endif /* CAN3_RX1_IT_ENABLE */
 
-#if CAN3_ENABLE_SCE_IT
+#if CAN3_SCE_IT_ENABLE
         HAL_NVIC_DisableIRQ(CAN3_SCE_IRQn);
-#endif /* CAN3_ENABLE_SCE_IT */
+#endif /* CAN3_SCE_IT_ENABLE */
     }
 #endif /* CAN3_ENABLE */
 
