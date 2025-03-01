@@ -17,8 +17,10 @@ void bsp_init(void) {
     system_clock_config();
     delay_init(180);
     usart1_init(115200);
+    usart2_init(115200);
     led_init();
     key_init();
+    bsp_crc32_init();
 }
 
 #ifdef USE_FULL_ASSERT

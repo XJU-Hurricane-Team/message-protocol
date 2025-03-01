@@ -197,13 +197,13 @@
 
 // <e> USART2 (Universal asynchronous receiver transmitter)
 
-#define USART2_ENABLE 0 
+#define USART2_ENABLE 1
 
 #if USART2_ENABLE
 
 //   <o> USART2_TX Pin
 //       <0=>Not Used <1=>PA2 <2=>PD5 
-#define USART2_TX_ID 0
+#define USART2_TX_ID 1
 
 #if (USART2_TX_ID == 0)
 #define USART2_TX 0
@@ -221,7 +221,7 @@
 
 //   <o> USART2_RX Pin
 //       <0=>Not Used <1=>PA3 <2=>PD6 
-#define USART2_RX_ID 0
+#define USART2_RX_ID 1
 
 #if (USART2_RX_ID == 0)
 #define USART2_RX 0

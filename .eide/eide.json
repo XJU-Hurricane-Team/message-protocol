@@ -27,6 +27,9 @@
           },
           {
             "path": "Drivers/Bsp/bsp.c"
+          },
+          {
+            "path": "Drivers/Bsp/bsp_crc/bsp_crc32.c"
           }
         ],
         "folders": []
@@ -264,6 +267,15 @@
           }
         ],
         "folders": []
+      },
+      {
+        "name": "Modules",
+        "files": [
+          {
+            "path": "User/Modules/msg_protocol/msg_protocol.c"
+          }
+        ],
+        "folders": []
       }
     ]
   },
@@ -284,7 +296,6 @@
         "<virtual_root>/Drivers/HAL_Driver/stm32f4xx_hal_adc_ex.c",
         "<virtual_root>/Drivers/HAL_Driver/stm32f4xx_hal_adc.c",
         "<virtual_root>/Drivers/HAL_Driver/stm32f4xx_hal_can.c",
-        "<virtual_root>/Drivers/HAL_Driver/stm32f4xx_hal_crc.c",
         "<virtual_root>/Drivers/HAL_Driver/stm32f4xx_hal_cryp_ex.c",
         "<virtual_root>/Drivers/HAL_Driver/stm32f4xx_hal_cryp.c",
         "<virtual_root>/Drivers/HAL_Driver/stm32f4xx_hal_dac_ex.c",
@@ -372,7 +383,8 @@
           "User/Application/Inc",
           "User/Utils",
           "Middlewares/FreeRTOS/include",
-          "Middlewares/FreeRTOS/portable/GCC/ARM_CM4F"
+          "Middlewares/FreeRTOS/portable/GCC/ARM_CM4F",
+          "User/Modules"
         ],
         "libList": [],
         "defineList": [
@@ -436,8 +448,7 @@
           "beforeBuildTasks": [],
           "afterBuildTasks": [],
           "global": {
-            "output-debug-info": "enable",
-            "use-microLIB": false
+            "output-debug-info": "enable"
           },
           "c/cpp-compiler": {
             "optimization": "level-0",

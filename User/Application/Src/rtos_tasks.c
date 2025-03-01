@@ -41,7 +41,7 @@ void start_task(void *pvParameters) {
     taskENTER_CRITICAL();
 
     xTaskCreate(task1, "task1", 128, NULL, 2, &task1_handle);
-    xTaskCreate(task2, "task2", 128, NULL, 2, &task2_handle);
+    xTaskCreate(task2, "task2", 128, NULL, 1, &task2_handle);
     xTaskCreate(task3, "task3", 128, NULL, 2, &task3_handle);
 
     vTaskDelete(start_task_handle);
@@ -75,10 +75,29 @@ void task2(void *pvParameters) {
     UNUSED(pvParameters);
 
     while (1) {
-        printf("STM32F4xx FreeRTOS project template. Running time: %d ms. \r\n",
-               xTaskGetTickCount());
-        vTaskDelay(1000);
+        message_polling_data();
     }
+}
+
+msg_status_t msg_send_demo_func(msg_type_t msg_type, size_t msg_len,
+                                uint8_t *msg_data) {
+    HAL_StatusTypeDef res = HAL_OK;
+
+    switch (msg_type) {
+        case MSG_TYPE_DEMO:
+            res = HAL_UART_Transmit(&usart2_handle, msg_data, msg_len, 1000);
+            message_send_finish_handle(msg_type);
+            break;
+
+        default:
+            break;
+    }
+
+    if (res != HAL_OK) {
+        return MSG_ERROR;
+    }
+
+    return MSG_OK;
 }
 
 /**
@@ -88,26 +107,26 @@ void task2(void *pvParameters) {
  */
 void task3(void *pvParameters) {
     UNUSED(pvParameters);
+    printf("Welcome use message protocol! \n"
+           "Press KEY0 send 0x00 ~ 0xFF (256 byte). \n");
+
+    size_t size = 256;
+    uint8_t *test_data = (uint8_t *)pvPortMalloc(sizeof(uint8_t) * size);
+
+    message_register_send_port(MSG_TYPE_DEMO, msg_send_demo_func);
+    message_set_send_buf(MSG_TYPE_DEMO, 100);
 
     key_press_t key = KEY_NO_PRESS;
 
     while (1) {
         key = key_scan(0);
         switch (key) {
-            case WKUP_PRESS: {
-                printf("Wake Up Pressed. \r\n");
-            } break;
-
             case KEY0_PRESS: {
-                printf("KEY0 Pressed. \r\n");
-            } break;
-
-            case KEY1_PRESS: {
-                printf("KEY1 Pressed. \r\n");
-            } break;
-
-            case KEY2_PRESS: {
-                printf("KEY2 PRessed. \r\n");
+                for (uint32_t i = 0; i < size; i++) {
+                    test_data[i] = i;
+                }
+                message_send_data(MSG_TYPE_DEMO, MSG_DATA_UINT8, test_data,
+                                  size);
             } break;
 
             default: {

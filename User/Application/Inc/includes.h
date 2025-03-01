@@ -18,6 +18,8 @@ extern "C" {
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "msg_protocol/msg_protocol.h"
+
 void freertos_start(void);
 
 #ifdef __cplusplus
