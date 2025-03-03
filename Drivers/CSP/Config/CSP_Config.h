@@ -379,13 +379,13 @@
 
 // <e> USART3 (Universal asynchronous receiver transmitter)
 
-#define USART3_ENABLE 0 
+#define USART3_ENABLE 1
 
 #if USART3_ENABLE
 
 //   <o> USART3_TX Pin
 //       <0=>Not Used <1=>PB10 <2=>PC10 <3=>PD8 
-#define USART3_TX_ID 0
+#define USART3_TX_ID 1
 
 #if (USART3_TX_ID == 0)
 #define USART3_TX 0
@@ -407,7 +407,7 @@
 
 //   <o> USART3_RX Pin
 //       <0=>Not Used <1=>PB11 <2=>PC5 <3=>PC11 <4=>PD9 
-#define USART3_RX_ID 0
+#define USART3_RX_ID 1
 
 #if (USART3_RX_ID == 0)
 #define USART3_RX 0
@@ -528,7 +528,7 @@
 #endif  /* USART3_RX_DMA */
 
 //   <e> Enable USART3 DMA TX
-#define USART3_TX_DMA             0
+#define USART3_TX_DMA             1
 
 #if USART3_TX_DMA
 

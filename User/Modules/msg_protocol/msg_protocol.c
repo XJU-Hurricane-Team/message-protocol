@@ -27,7 +27,25 @@ typedef struct __fifo_node {
     uint32_t len;             /*!< 数据长度 */
     bool complete;            /*!< 处理完毕, 是完整的数据包 */
     struct __fifo_node *next; /*!< 下一个内容 */
+    struct __fifo_node *prev; /*!< 上一个内容 */
 } fifo_node_t;
+
+/**
+ * @brief 帧处理类型
+ */
+typedef enum {
+    HEAD_FRAME, /*!< 处理头帧 */
+    TAIL_FRAME, /*!< 处理尾帧 */
+    NO_FRAME,   /*!< 保留帧 */
+} deal_type_t;
+
+/**
+ * @brief CRC处理联合体
+ */
+typedef union {
+    uint8_t array[sizeof(MSG_CRC_TYPE)];
+    MSG_CRC_TYPE result;
+} send_crc_t;
 
 /**
  * @brief 消息对象
@@ -49,6 +67,8 @@ static struct msg_struct {
     /*!< 接收队列, 接收入队, 处理完出队 */
     fifo_node_t *fifo_head; /*!< 队列头指针 */
     fifo_node_t *fifo_tail; /*!< 队列尾指针 */
+
+    deal_type_t DEAL_FLAGE; /*!< 帧处理标识 */
 
 #if MSG_ENABLE_STATISTICS
     /* 发送相关 */
@@ -372,7 +392,7 @@ msg_status_t message_send_data(msg_type_t msg_type, msg_data_type_t data_type,
         send_buf[buf_index] = data[data_index];
 
 #if MSG_ENABLE_ESCAPE
-        if ((data[data_index] == MSG_SOF) || (data[data_index] == MSG_EOF)) {
+        if (data[data_index] == MSG_EOF) {
             ++buf_index;
             send_buf[buf_index] = data[data_index];
             /* 长度 + 1, 避免未写入完提前跳出循环导致丢数据 */
@@ -391,8 +411,7 @@ msg_status_t message_send_data(msg_type_t msg_type, msg_data_type_t data_type,
     for (size_t i = 0; i < sizeof(crc_result); ++i) {
         send_buf[buf_index] = crc_result & 0xFF;
 #if MSG_ENABLE_ESCAPE
-        if ((send_buf[buf_index] == MSG_SOF) ||
-            (send_buf[buf_index] == MSG_EOF)) {
+        if (send_buf[buf_index] == MSG_EOF) {
             send_buf[buf_index + 1] = send_buf[buf_index];
             ++buf_index;
         }
@@ -437,34 +456,209 @@ void message_send_finish_handle(msg_type_t msg_type) {
 }
 #endif /* MSG_ENABLE_RTOS */
 
+/**
+ * @brief 处理缓存区数据帧并加入队列
+ * @note 处理思路：
+ *       每一次处理缓存区都进行循环直到遍历所有数据，
+ *       在每一次循环中根据消息结构体里的标志位来决定是找SOF还是EOF。
+ *       如果是找SOF又分为找到完整帧与只找到头帧两种情况，
+ *       如果找到完整帧，则进行CRC校验，然后分配空间存储消息，反转义，加入队列。
+ *       如果只找到头帧，则存储前半个帧，并更改消息结构体中的标志位，让下一次循环找EOF。
+ *       如果是找EOF，没找到清空队列中的最后一个节点（存储的是前半截帧）并更改标志位让下一次循环找SOF，
+ *       找到的话选择与前半截帧合并作为完整的帧进行校验，也更改标志位让下一次循环找SOF。
+ *       
+ *       重构思路：
+ *       将完整帧的处理（CRC校验和反转义的过程）和找EOF标识符的过程单独封装成函数进行复用。
+ *       对于数据帧的格式进行调整，CRC校验位数固定，数据区长度部分取消。
+ * 
+ * @param msg 消息对象
+ * @param recv_len 缓存区数据长度
+ * @return msg_type_t 
+ */
 static msg_type_t message_data_enqueue(struct msg_struct *msg,
                                        uint32_t recv_len) {
     uint8_t *recv_buf = msg->recv_buf;
     uint32_t buf_idx = 0;
 
-    if (msg->fifo_head == NULL) {
+    /* 创建队列节点 */
+    if (msg->DEAL_FLAGE != TAIL_FRAME) {
         fifo_node_t *new_node =
             (fifo_node_t *)MSG_CALLOC(1, sizeof(fifo_node_t));
         if (new_node == NULL) {
             return MSG_MEM_FAIL;
         }
-
-        msg->fifo_head = new_node;
-        msg->fifo_tail = new_node;
-
-        /* 找到起始标识 */
-        while (recv_buf[buf_idx] != MSG_SOF) {
-            ++buf_idx;
-            /* 没找到, 返回 */
-            if (buf_idx >= recv_len) {
-                return MSG_RECV_ERROR;
-            }
+        if (msg->fifo_head == NULL) {
+            msg->fifo_head = new_node;
+            new_node->next = NULL;
+            new_node->prev = NULL;
+            msg->fifo_tail = new_node;
+        } else {
+            msg->fifo_tail->next = new_node;
+            new_node->prev = msg->fifo_tail;
+            msg->fifo_tail = new_node;
         }
-
-        recv_buf = &msg->recv_buf[buf_idx];
     }
 
-    uint32_t msg_len = 0;
+    while (buf_idx < recv_len) {
+
+        switch (msg->DEAL_FLAGE) {
+            /* 处理找起始标志位的情况 */
+            case HEAD_FRAME:
+
+                /* 找到起始标识 */
+                while (recv_buf[buf_idx] != MSG_SOF) {
+                    ++buf_idx;
+                    /* 没找到, 返回 */
+                    if (buf_idx >= recv_len) {
+                        return MSG_RECV_ERROR;
+                    }
+                }
+                recv_buf = &msg->recv_buf[buf_idx];
+
+                /* 找到结束标识符确定消息长度 */
+                uint32_t msg_len = 0;
+                uint32_t eof_num = 0;
+                bool is_full_frame = false;
+                while (1) {
+                    ++msg_len;
+                    eof_num = 0;
+                    /* 判断连续的eof标识符个数，偶数表示为转义，奇数表明最后一个为结束标识符 */
+                    while (recv_buf[msg_len] == MSG_EOF) {
+                        ++eof_num;
+                        ++msg_len;
+                    }
+                    if (eof_num % 2 == 1) { /*!<获得一个完整的帧的处理机制 */
+                        is_full_frame = true;
+                        break;
+                    } else if (msg_len >= (recv_len - buf_idx)) {
+                        /*!<获得半个帧的处理机制 */
+                        is_full_frame = false;
+                        break;
+                    }
+                }
+                buf_idx +=
+                    msg_len; /* 索引指向当前帧的后面，以满足循环的退出条件 */
+                /* 帧处理 */
+                if (is_full_frame) {
+                    /* 处理完整的帧 */
+                    /* 进行CRC校验，存疑->大小端问题 */
+                    send_crc_t send_crc;
+                    for (int i = 0; i < sizeof(MSG_CRC_TYPE); ++i) {
+                        send_crc.array[i] = recv_buf[msg_len - i - 2];
+                    }
+                    uint32_t recv_crc = bsp_crc32_calc(
+                        recv_buf, msg_len - (sizeof(MSG_CRC_TYPE) + 1));
+                    if (send_crc.result != recv_crc) {
+                        break; /* CRC错误退出当前帧的处理 */
+                    }
+
+                    /* 为完整的帧分配空间 */
+                    uint8_t *frame_space = (uint8_t *)MSG_CALLOC(1, msg_len);
+                    if (frame_space == NULL) {
+                        return MSG_MEM_FAIL;
+                    }
+                    /* 复制数据并进行反转义 */
+                    uint32_t real_len = 0;
+                    for (int i = 0; i < msg_len; i++) {
+                        /* 反转义只用考虑偶数个EOF出现的情况 */
+                        if (recv_buf[i] == MSG_EOF && i != msg_len - 1) {
+                            frame_space[real_len] = recv_buf[++i];
+                        } else {
+                            frame_space[real_len] = recv_buf[i];
+                        }
+                        real_len++;
+                    }
+                    msg->fifo_tail->data = frame_space;
+                    msg->fifo_tail->len = real_len;
+                    msg->fifo_tail->complete = true;
+                    msg->DEAL_FLAGE = HEAD_FRAME;
+
+                } else {
+                    /* 存储前半个帧*/
+                    uint8_t *frame_space = (uint8_t *)MSG_CALLOC(1, msg_len);
+                    if (frame_space == NULL) {
+                        return MSG_MEM_FAIL;
+                    }
+                    memcpy(frame_space, recv_buf, msg_len);
+                    msg->fifo_tail->data = frame_space;
+
+                    msg->fifo_tail->len = msg_len;
+                    msg->fifo_tail->complete = false;
+                    msg->DEAL_FLAGE = TAIL_FRAME;
+                }
+                break;
+            case TAIL_FRAME:
+                /* 先找EOF标识符 */
+                uint32_t half_msg_len = 0;
+                uint32_t half_eof_num = 0;
+                while (1) {
+                    ++half_msg_len;
+                    half_eof_num = 0;
+                    /* 判断连续的eof标识符个数，偶数表示为转义，奇数表明最后一个为结束标识符 */
+                    while (recv_buf[half_msg_len] == MSG_EOF) {
+                        ++half_eof_num;
+                        ++half_msg_len;
+                    }
+                    if (half_eof_num % 2 ==
+                        1) { /* 获得一个完整的帧的处理机制 */
+                        break;
+                    } else if (half_msg_len >= (recv_len - buf_idx)) {
+                        /* 没有找到帧的结束标识符删除已经存储起来的上半帧 */
+                        msg->fifo_tail = msg->fifo_tail->prev;
+                        MSG_FREE(
+                            msg->fifo_tail->next
+                                ->data); /* 释放节点指向的数据以及节点自身的存储空间 */
+                        MSG_FREE(msg->fifo_tail->next);
+                        msg->fifo_tail->next = NULL;
+                        msg->DEAL_FLAGE = HEAD_FRAME;
+                        return MSG_RECV_ERROR;
+                    }
+                }
+                /* 将找到的尾帧和上次处理得到的头帧合并 */
+                uint32_t head_len = msg->fifo_head->len;
+                uint32_t full_len = head_len + half_msg_len;
+                uint8_t *full_frame =
+                    MSG_REALLOC(msg->fifo_tail->data,
+                                full_len); /* 重新分配空间以容纳完整的帧 */
+                if (full_frame == NULL) {
+                    return MSG_MEM_FAIL;
+                }
+                memcpy(full_frame + head_len, recv_buf, half_msg_len);
+                msg->fifo_tail->len = full_len;
+                /* 处理拼凑成的完整的帧 */
+                /* 进行CRC校验，存疑->大小端问题 */
+                send_crc_t send_crc_fix;
+                for (int i = 0; i < sizeof(MSG_CRC_TYPE); ++i) {
+                    send_crc_fix.array[i] = full_frame[full_len - i - 2];
+                }
+                uint32_t recv_crc = bsp_crc32_calc(
+                    full_frame, full_len - (sizeof(MSG_CRC_TYPE) + 1));
+                if (send_crc_fix.result != recv_crc) {
+                    MSG_FREE(full_frame);
+                    MSG_FREE(msg->fifo_tail->data);
+                    msg->fifo_tail = msg->fifo_tail->prev;
+                    MSG_FREE(msg->fifo_tail->next->data);
+                    MSG_FREE(msg->fifo_tail->next);
+                    break; /* CRC错误退出当前帧的处理 */
+                }
+                /* 复制数据并进行反转义 */
+                uint32_t real_len =
+                    0; /* !< 需要更改！以去除头部标志位和长度标识符 */
+                for (int i = 0; i < full_len; i++) {
+                    if (full_frame[i] == MSG_EOF && i != full_len - 1) {
+                        full_frame[real_len] = full_frame[++i];
+                    } else {
+                        full_frame[real_len] = full_frame[i];
+                    }
+                    real_len++;
+                }
+                msg->fifo_tail->data = full_frame;
+                msg->DEAL_FLAGE = HEAD_FRAME;
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 /**

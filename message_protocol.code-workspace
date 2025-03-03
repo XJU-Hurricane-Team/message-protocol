@@ -22,7 +22,8 @@
             "*.cc": "cpp",
             "cstddef": "c",
             "initializer_list": "c",
-            "type_traits": "c"
+            "type_traits": "c",
+            "limits": "c"
         },
         "[yaml]": {
             "editor.insertSpaces": true,

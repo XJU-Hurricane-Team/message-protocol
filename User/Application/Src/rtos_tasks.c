@@ -20,6 +20,47 @@ void task2(void *pvParameters);
 static TaskHandle_t task3_handle;
 void task3(void *pvParameters);
 
+msg_status_t msg_send_demo_func(msg_type_t msg_type, size_t msg_len,
+                                uint8_t *msg_data) {
+    HAL_StatusTypeDef res = HAL_OK;
+
+    switch (msg_type) {
+        case MSG_TYPE_DEMO:
+            res = HAL_UART_Transmit(&usart2_handle, msg_data, msg_len, 1000);
+            message_send_finish_handle(msg_type);
+            break;
+
+        default:
+            break;
+    }
+
+    if (res != HAL_OK) {
+        return MSG_ERROR;
+    }
+
+    return MSG_OK;
+}
+
+size_t msg_recv_demo_func(msg_type_t msg_type, size_t msg_len,
+                          uint8_t *msg_data) {
+    HAL_StatusTypeDef res = HAL_OK;
+
+    switch (msg_type) {
+        case MSG_TYPE_DEMO:
+            res = HAL_UART_Receive_DMA(&usart3_handle, msg_data, msg_len);
+            break;
+
+        default:
+            break;
+    }
+
+    if (res != HAL_OK) {
+        return MSG_ERROR;
+    }
+
+    return MSG_OK;
+}
+
 /*****************************************************************************/
 
 /**
@@ -73,31 +114,13 @@ void task1(void *pvParameters) {
  */
 void task2(void *pvParameters) {
     UNUSED(pvParameters);
+    message_register_recv_port(MSG_TYPE_DEMO, msg_recv_demo_func);
+    message_set_recv_buf(MSG_TYPE_DEMO, 100);
+    message_register_recv_callback(MSG_TYPE_DEMO, NULL);
 
     while (1) {
         message_polling_data();
     }
-}
-
-msg_status_t msg_send_demo_func(msg_type_t msg_type, size_t msg_len,
-                                uint8_t *msg_data) {
-    HAL_StatusTypeDef res = HAL_OK;
-
-    switch (msg_type) {
-        case MSG_TYPE_DEMO:
-            res = HAL_UART_Transmit(&usart2_handle, msg_data, msg_len, 1000);
-            message_send_finish_handle(msg_type);
-            break;
-
-        default:
-            break;
-    }
-
-    if (res != HAL_OK) {
-        return MSG_ERROR;
-    }
-
-    return MSG_OK;
 }
 
 /**

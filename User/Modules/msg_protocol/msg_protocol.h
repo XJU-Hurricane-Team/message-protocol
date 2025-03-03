@@ -41,7 +41,7 @@
 #define __MSG_PROTOCOL_H
 
 #include <stdlib.h>
-
+#include <string.h>
 #include <stdint.h>
 
 /* 帧起始标志 (Start Of Frame), 建议大于 0x80 */
