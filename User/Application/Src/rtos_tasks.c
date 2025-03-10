@@ -20,47 +20,6 @@ void task2(void *pvParameters);
 static TaskHandle_t task3_handle;
 void task3(void *pvParameters);
 
-msg_status_t msg_send_demo_func(msg_type_t msg_type, size_t msg_len,
-                                uint8_t *msg_data) {
-    HAL_StatusTypeDef res = HAL_OK;
-
-    switch (msg_type) {
-        case MSG_TYPE_DEMO:
-            res = HAL_UART_Transmit(&usart2_handle, msg_data, msg_len, 1000);
-            message_send_finish_handle(msg_type);
-            break;
-
-        default:
-            break;
-    }
-
-    if (res != HAL_OK) {
-        return MSG_ERROR;
-    }
-
-    return MSG_OK;
-}
-
-size_t msg_recv_demo_func(msg_type_t msg_type, size_t msg_len,
-                          uint8_t *msg_data) {
-    HAL_StatusTypeDef res = HAL_OK;
-
-    switch (msg_type) {
-        case MSG_TYPE_DEMO:
-            res = HAL_UART_Receive_DMA(&usart3_handle, msg_data, msg_len);
-            break;
-
-        default:
-            break;
-    }
-
-    if (res != HAL_OK) {
-        return MSG_ERROR;
-    }
-
-    return MSG_OK;
-}
-
 /*****************************************************************************/
 
 /**
@@ -102,21 +61,33 @@ void task1(void *pvParameters) {
 
     while (1) {
         LED0_TOGGLE();
-        LED1_TOGGLE();
         vTaskDelay(1000);
     }
 }
 
 /**
- * @brief Task2: print running time.
+ * @brief 回调函数 demo
+ *
+ * @param msg_length 消息帧长度
+ * @param msg_id_type 消息 ID 和数据类型 (高四位为 ID, 低四位为数据类型)
+ * @param[in] msg_data 消息数据接收区
+ */
+static void msg_callback_demo(uint32_t msg_length, uint8_t msg_id_type,
+                              uint8_t *msg_data) {
+    UNUSED(msg_data);
+    printf("length: %d, type: %x", msg_length, msg_id_type);
+}
+
+/**
+ * @brief Task2: 消息轮询
  *
  * @param pvParameters Start parameters.
  */
 void task2(void *pvParameters) {
     UNUSED(pvParameters);
-    message_register_recv_port(MSG_TYPE_DEMO, msg_recv_demo_func);
-    message_set_recv_buf(MSG_TYPE_DEMO, 100);
-    message_register_recv_callback(MSG_TYPE_DEMO, NULL);
+
+    message_register_polling_uart(MSG_ID_DEMO, &usart2_handle, 200);
+    message_register_recv_callback(MSG_ID_DEMO, msg_callback_demo);
 
     while (1) {
         message_polling_data();
@@ -124,7 +95,7 @@ void task2(void *pvParameters) {
 }
 
 /**
- * @brief Task3: Scan the key and print which key pressed.
+ * @brief Task3: 按键发送消息
  *
  * @param pvParameters Start parameters.
  */
@@ -133,11 +104,10 @@ void task3(void *pvParameters) {
     printf("Welcome use message protocol! \n"
            "Press KEY0 send 0x00 ~ 0xFF (256 byte). \n");
 
-    size_t size = 256;
+    size_t size = 100;
     uint8_t *test_data = (uint8_t *)pvPortMalloc(sizeof(uint8_t) * size);
 
-    message_register_send_port(MSG_TYPE_DEMO, msg_send_demo_func);
-    message_set_send_buf(MSG_TYPE_DEMO, 100);
+    message_register_send_uart(MSG_ID_DEMO, &usart2_handle, size);
 
     key_press_t key = KEY_NO_PRESS;
 
@@ -148,8 +118,9 @@ void task3(void *pvParameters) {
                 for (uint32_t i = 0; i < size; i++) {
                     test_data[i] = i;
                 }
-                message_send_data(MSG_TYPE_DEMO, MSG_DATA_UINT8, test_data,
-                                  size);
+
+                message_send_data(MSG_ID_DEMO, MSG_DATA_UINT8, test_data, size);
+
             } break;
 
             default: {

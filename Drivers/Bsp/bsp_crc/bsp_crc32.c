@@ -37,7 +37,6 @@ uint32_t bsp_crc32_calc(uint8_t *data, uint32_t len) {
         CRC->DR = __RBIT(*(uint32_t *)data);
         data += 4;
     }
-
     temp = __RBIT(CRC->DR);
 
     index = len & 0x03;
