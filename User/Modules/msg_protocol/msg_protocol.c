@@ -27,9 +27,9 @@ typedef struct __fifo_node {
     uint32_t len;             /*!< 当前节点数据量大小 */
     struct __fifo_node *next; /*!< 下一个 FIFO 节点 */
 #ifdef __GNUC__
-    uint8_t data[0]; /*!< 数据缓冲区大小 */
+    uint8_t data[0]; /*!< 数据缓冲区 */
 #else                /* __GNUC__ */
-    uint8_t data[]; /*!< 数据缓冲区大小 */
+    uint8_t data[]; /*!< 数据缓冲区 */
 #endif               /* __GNUC__ */
 } fifo_node_t;
 
@@ -111,7 +111,7 @@ void message_register_send_uart(msg_id_t msg_id, UART_HandleTypeDef *huart,
 
     msg->send_buf_len = buf_size;
 #if MSG_ENABLE_RTOS
-    if (msg->send_buf_semp != NULL) {
+    if (msg->send_buf_semp == NULL) {
         msg->send_buf_semp = xSemaphoreCreateMutex();
     }
 #endif /* MSG_ENABLE_RTOS */
@@ -132,6 +132,13 @@ void message_register_polling_uart(msg_id_t msg_id, UART_HandleTypeDef *huart,
 
     struct msg_instance *msg = &msg_list[msg_id];
     msg->recv_uart = huart;
+    msg->recv_buf = (uint8_t *)MSG_MALLOC(buf_size);
+    if (msg->recv_buf == NULL) {
+#if MSG_ENABLE_STATISTICS
+        ++msg->mem_fail;
+#endif /* MSG_ENABLE_STATISTICS */
+        return;
+    }
     msg->recv_buf_size = buf_size;
 }
 
@@ -227,19 +234,20 @@ void message_polling_data(void) {
             continue;
         }
 
+        if (msg->recv_callback == NULL) {
+            /* 避免串口 fifo 溢出, 当没有回调函数的时候也要读一次 */
+            continue;
+        }
+
+        message_data_dequeue(msg);
+
         recv_len =
             uart_dmarx_read(msg->recv_uart, msg->recv_buf, msg->recv_buf_size);
         if (recv_len == 0) {
             continue;
         }
 
-        if (msg->recv_callback == NULL) {
-            /* 避免串口 fifo 溢出, 当没有回调函数的时候也要读一次 */
-            continue;
-        }
-
         message_data_enqueue(msg, recv_len);
-        message_data_dequeue(msg);
     }
 }
 
@@ -288,6 +296,8 @@ static void message_data_enqueue(struct msg_instance *msg, uint32_t recv_len) {
                 return;
             }
 
+            new_node->len = 0;
+            new_node->next = NULL;
             /* 尾指针后移 */
             tail->next = new_node;
             msg->tail = new_node;
@@ -315,6 +325,7 @@ static void message_data_dequeue(struct msg_instance *msg) {
     fifo_node_t *head = msg->head;
 
     if (head == NULL) {
+
         return;
     }
 
@@ -325,27 +336,33 @@ static void message_data_dequeue(struct msg_instance *msg) {
 
     fifo_node_t *current_head = head;
 
+    if ((current_head->len - 3) == current_head->data[1]) {
+        /* 调用回调函数后释放头指针 */
+        if (msg->recv_callback != NULL) {
+            /* 数据内容去掉头标识, 长度和结束标识, 所以长度减去 3 字节 */
+            msg->recv_callback(current_head->len - 3, current_head->data[0],
+                               &current_head->data[2]);
+        }
 #if MSG_ENABLE_STATISTICS
-    if (current_head->len != current_head->data[1]) {
-        /* 实际接收到的长度与数据包里的长度不一致 */
-        ++msg->recv_error;
-    }
+        ++msg->recv_success;
 #endif /* MSG_ENABLE_STATISTICS */
 
-    /* 调用回调函数后释放头指针 */
-    if (msg->recv_callback != NULL) {
-        /* 数据内容去掉头标识, 长度和结束标识, 所以长度减去 3 字节 */
-        msg->recv_callback(current_head->len - 3, current_head->data[0],
-                           &current_head->data[2]);
-    }
+    } else {
+/* 实际接收到的长度与数据包里的长度不一致 */
 #if MSG_ENABLE_STATISTICS
-    ++msg->recv_success;
+        // printf("记录长度：%d,数据长度：%d\n", current_head->len,
+        //        current_head->data[1]);
+        ++msg->recv_error;
 #endif /* MSG_ENABLE_STATISTICS */
+    }
 
     /* 头指针后移, 释放旧的头指针 */
     msg->head = msg->head->next;
+    if (msg->head == NULL) {
+        msg->tail = NULL;
+    }
 
-    MSG_FREE(msg->head);
+    MSG_FREE(current_head);
 
 #if MSG_ENABLE_STATISTICS
     --msg->fifo_len;

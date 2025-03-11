@@ -39,12 +39,6 @@ void key_init(void) {
     gpio_initure.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(CSP_GPIO_PORT(KEY2_GPIO_PORT), &gpio_initure);
 
-    CSP_GPIO_CLK_ENABLE(WKUP_GPIO_PORT);
-    gpio_initure.Pin = WKUP_GPIO_PIN;
-    gpio_initure.Mode = GPIO_MODE_INPUT;
-    gpio_initure.Pull = GPIO_PULLDOWN;
-    gpio_initure.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(CSP_GPIO_PORT(WKUP_GPIO_PORT), &gpio_initure);
 }
 
 /* Detect the key Pin status. */
@@ -65,7 +59,7 @@ key_press_t key_scan(uint8_t scan_continous) {
     if (scan_continous == 1) {
         key_up = 1; /* Detect consecutive presses. */
     }
-    if (key_up && (KEY0 == 0 || KEY1 == 0 || KEY2 == 0 || WK_UP == 1)) {
+    if (key_up && (KEY0 == 0 || KEY1 == 0 || KEY2 == 0)) {
         delay_ms(10);
         key_up = 0;
         if (KEY0 == 0) {
@@ -74,10 +68,8 @@ key_press_t key_scan(uint8_t scan_continous) {
             return KEY1_PRESS;
         } else if (KEY2 == 0) {
             return KEY2_PRESS;
-        } else if (WK_UP == 1) {
-            return WKUP_PRESS;
         }
-    } else if (KEY0 == 1 && KEY1 == 1 && KEY2 == 1 && WK_UP == 0) {
+    } else if (KEY0 == 1 && KEY1 == 1 && KEY2 == 1) {
         key_up = 1;
     }
     return KEY_NO_PRESS;

@@ -41,7 +41,7 @@ void start_task(void *pvParameters) {
     taskENTER_CRITICAL();
 
     xTaskCreate(task1, "task1", 128, NULL, 2, &task1_handle);
-    xTaskCreate(task2, "task2", 128, NULL, 1, &task2_handle);
+    xTaskCreate(task2, "task2", 128, NULL, 2, &task2_handle);
     xTaskCreate(task3, "task3", 128, NULL, 2, &task3_handle);
 
     vTaskDelete(start_task_handle);
@@ -74,8 +74,10 @@ void task1(void *pvParameters) {
  */
 static void msg_callback_demo(uint32_t msg_length, uint8_t msg_id_type,
                               uint8_t *msg_data) {
+    static uint32_t count = 0;
     UNUSED(msg_data);
-    printf("length: %d, type: %x", msg_length, msg_id_type);
+    printf("length: %d, type: %x times: %d \n", msg_length, msg_id_type,
+           ++count);
 }
 
 /**
@@ -86,7 +88,7 @@ static void msg_callback_demo(uint32_t msg_length, uint8_t msg_id_type,
 void task2(void *pvParameters) {
     UNUSED(pvParameters);
 
-    message_register_polling_uart(MSG_ID_DEMO, &usart2_handle, 200);
+    message_register_polling_uart(MSG_ID_DEMO, &usart3_handle, 200);
     message_register_recv_callback(MSG_ID_DEMO, msg_callback_demo);
 
     while (1) {
@@ -107,7 +109,7 @@ void task3(void *pvParameters) {
     size_t size = 100;
     uint8_t *test_data = (uint8_t *)pvPortMalloc(sizeof(uint8_t) * size);
 
-    message_register_send_uart(MSG_ID_DEMO, &usart2_handle, size);
+    message_register_send_uart(MSG_ID_DEMO, &uart4_handle, size);
 
     key_press_t key = KEY_NO_PRESS;
 

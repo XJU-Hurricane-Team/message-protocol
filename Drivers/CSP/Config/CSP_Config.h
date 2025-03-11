@@ -468,7 +468,7 @@
 #endif  /* USART3_RTS_ID */
 
 //   <e> Enable USART3 Interrupt
-#define USART3_IT_ENABLE 0
+#define USART3_IT_ENABLE 1
 
 #if USART3_IT_ENABLE
 
@@ -483,7 +483,7 @@
 #endif /* USART3_IT_ENABLE */
 
 //   <e> Enable USART3 DMA RX
-#define USART3_RX_DMA             0
+#define USART3_RX_DMA             1
 
 #if USART3_RX_DMA
 
@@ -573,13 +573,13 @@
 
 // <e> UART4 (Universal synchronous asynchronous receiver transmitter)
 
-#define UART4_ENABLE 0 
+#define UART4_ENABLE 1
 
 #if UART4_ENABLE
 
 //   <o> UART4_TX Pin
 //       <0=>Not Used <1=>PA0 <2=>PA12 <3=>PD1 <4=>PD10 <5=>PC10 
-#define UART4_TX_ID 0
+#define UART4_TX_ID 1
 
 #if (UART4_TX_ID == 0)
 #define UART4_TX 0
@@ -609,7 +609,7 @@
 
 //   <o> UART4_RX Pin
 //       <0=>Not Used <1=>PA1 <2=>PA11 <3=>PC11 <4=>PD0 
-#define UART4_RX_ID 0
+#define UART4_RX_ID 1
 
 #if (UART4_RX_ID == 0)
 #define UART4_RX 0
@@ -662,7 +662,7 @@
 #endif  /* UART4_RTS_ID */
 
 //   <e> Enable UART4 Interrupt
-#define UART4_IT_ENABLE 0
+#define UART4_IT_ENABLE 1
 
 #if UART4_IT_ENABLE
 
@@ -677,7 +677,7 @@
 #endif /* UART4_IT_ENABLE */
 
 //   <e> Enable UART4 DMA RX
-#define UART4_RX_DMA             0
+#define UART4_RX_DMA             1
 
 #if UART4_RX_DMA
 
@@ -722,7 +722,7 @@
 #endif  /* UART4_RX_DMA */
 
 //   <e> Enable UART4 DMA TX
-#define UART4_TX_DMA             0
+#define UART4_TX_DMA             1
 
 #if UART4_TX_DMA
 
