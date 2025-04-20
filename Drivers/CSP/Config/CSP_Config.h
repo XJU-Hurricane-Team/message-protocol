@@ -579,7 +579,7 @@
 
 //   <o> UART4_TX Pin
 //       <0=>Not Used <1=>PA0 <2=>PA12 <3=>PD1 <4=>PD10 <5=>PC10 
-#define UART4_TX_ID 1
+#define UART4_TX_ID 5
 
 #if (UART4_TX_ID == 0)
 #define UART4_TX 0
@@ -609,7 +609,7 @@
 
 //   <o> UART4_RX Pin
 //       <0=>Not Used <1=>PA1 <2=>PA11 <3=>PC11 <4=>PD0 
-#define UART4_RX_ID 1
+#define UART4_RX_ID 3
 
 #if (UART4_RX_ID == 0)
 #define UART4_RX 0
@@ -756,7 +756,7 @@
 
 //     <o> The size of Receive buf [byte]
 //     <i>  Write data to Send buf, and sending with thread safety
-#define UART4_TX_DMA_BUF_SIZE    256
+#define UART4_TX_DMA_BUF_SIZE    512
 
 //   </e>
 

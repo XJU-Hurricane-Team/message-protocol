@@ -44,8 +44,10 @@
 
 #include <stdlib.h>
 
-/* 帧结束标志 (End Of Frame) */
-#define MSG_EOF                0xFF
+/* 帧结束标志 (End Of Frame), 注意需要避开数据头标识和长度 */
+#define MSG_EOF                0x7F
+/* 转义标识 (Escape), 注意需要避开头标识和长度 */
+#define MSG_ESC                0x8F
 
 /* 线程安全处理, 启用后会使用互斥信号量来管理全局变量, 仅支持 FreeRTOS. */
 #define MSG_ENABLE_RTOS        1

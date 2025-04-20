@@ -10,6 +10,7 @@
 #include "msg_protocol.h"
 
 #include <string.h>
+#include <stdbool.h>
 
 #if MSG_ENABLE_RTOS
 #include "FreeRTOS.h"
@@ -53,6 +54,10 @@ static struct msg_instance {
 
     fifo_node_t *head; /*!< 接收队列头指针 */
     fifo_node_t *tail; /*!< 接收队列尾指针 */
+
+#ifdef MSG_ESC
+    bool escape; /*!< 是否要将下一个字符转义 */
+#endif           /* MSG_ESC */
 
 #if MSG_ENABLE_STATISTICS
     uint32_t recv_success; /*!< 接收成功计数 */
@@ -196,21 +201,39 @@ void message_send_data(msg_id_t msg_id, msg_type_t data_type, uint8_t *data,
         msg->send_buf_len = data_len / 2;
     }
 
-    uint8_t *data_buf = (uint8_t *)msg->send_buf;
+    uint8_t *send_buf = (uint8_t *)msg->send_buf;
+    uint32_t buf_idx = 0;
 
-    /* 复制数据到字节流, 前面空出两个字节用来标记数据 */
-    memcpy((data_buf + 2), data, data_len);
     /* 第一个字节, 高四位标记 ID, 低四位标记数据类型 */
-    *data_buf = (uint8_t)(msg_id << 4) | data_type;
+    send_buf[buf_idx] = (uint8_t)(msg_id << 4) | data_type;
+    ++buf_idx;
     /* 第二个字节, 标记数据长度 */
-    *(data_buf + 1) = (uint8_t)data_len;
+    send_buf[buf_idx] = (uint8_t)data_len;
+    ++buf_idx;
+
+    /* 复制数据到字节流 */
+    for (uint32_t data_idx = 0; data_idx < data_len; ++data_idx) {
+#ifdef MSG_ESC
+        if ((data[data_idx] == MSG_EOF) || (data[data_idx] == MSG_ESC)) {
+            /* 转义 */
+            send_buf[buf_idx] = MSG_ESC;
+            ++buf_idx;
+        }
+#endif /* MSG_ESC */
+
+        send_buf[buf_idx] = data[data_idx];
+        ++buf_idx;
+    }
+
     /* 最后一个字节, 标记数据末尾 */
-    *(data_buf + data_len + 2) = MSG_EOF;
+    send_buf[buf_idx] = MSG_EOF;
+    ++buf_idx;
+
     if (msg->send_uart->hdmatx != NULL) {
-        uart_dmatx_write(msg->send_uart, data_buf, data_len + 3);
+        uart_dmatx_write(msg->send_uart, send_buf, buf_idx);
         uart_dmatx_send(msg->send_uart);
     } else {
-        HAL_UART_Transmit(msg->send_uart, data_buf, data_len + 3, 0xFFFF);
+        HAL_UART_Transmit(msg->send_uart, send_buf, buf_idx, 0xFFFF);
     }
 
 #if MSG_ENABLE_RTOS
@@ -277,6 +300,14 @@ static void message_data_enqueue(struct msg_instance *msg, uint32_t recv_len) {
     fifo_node_t *tail = msg->tail;
 
     for (uint32_t i = 0; i < recv_len; ++i) {
+#ifdef MSG_ESC
+        if ((msg->recv_buf[i] == MSG_ESC) && (msg->escape == false)) {
+            /* 遇到转义, 跳过这一字节到下一字节 */
+            msg->escape = true;
+            continue;
+        }
+#endif /* MSG_ESC */
+
         tail->data[tail->len] = msg->recv_buf[i];
         ++tail->len;
 
@@ -285,6 +316,14 @@ static void message_data_enqueue(struct msg_instance *msg, uint32_t recv_len) {
             --tail->len;
             tail->data[tail->len] = MSG_EOF;
         }
+
+#ifdef MSG_ESC
+        if (msg->escape) {
+            msg->escape = false;
+            /* 这是被转移的字符, 避免执行到下面的结束标识被当成结束符处理 */
+            continue;
+        }
+#endif /* MSG_ESC */
 
         if (msg->recv_buf[i] == MSG_EOF) {
             new_node = (fifo_node_t *)MSG_MALLOC(sizeof(fifo_node_t) +
@@ -325,7 +364,6 @@ static void message_data_dequeue(struct msg_instance *msg) {
     fifo_node_t *head = msg->head;
 
     if (head == NULL) {
-
         return;
     }
 
@@ -350,8 +388,6 @@ static void message_data_dequeue(struct msg_instance *msg) {
     } else {
 /* 实际接收到的长度与数据包里的长度不一致 */
 #if MSG_ENABLE_STATISTICS
-        // printf("记录长度：%d,数据长度：%d\n", current_head->len,
-        //        current_head->data[1]);
         ++msg->recv_error;
 #endif /* MSG_ENABLE_STATISTICS */
     }
