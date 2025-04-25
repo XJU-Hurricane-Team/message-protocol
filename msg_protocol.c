@@ -2,9 +2,8 @@
  * @file    msg_protocol.c
  * @author  Deadline039
  * @brief   消息协议以及收发
- * @version 1.0
+ * @version 2.2
  * @date    2024-03-01
- * @note    接收暂只支持DMA, 如果使用中断自行到`uart.h`编写相应代码
  */
 
 #include "msg_protocol.h"
@@ -71,22 +70,6 @@ static struct msg_instance {
 } msg_list[MSG_ID_RESERVE_LEN];
 
 /**
- * @brief 注册接收回调函数指针
- *
- * @param msg_id 数据含义
- * @param msg_callback 回调指针
- * @note 如果更换回调函数, 重新调用该函数即可
- */
-void message_register_recv_callback(msg_id_t msg_id,
-                                    msg_recv_callback_t msg_callback) {
-    if (msg_id >= MSG_ID_RESERVE_LEN) {
-        return;
-    }
-
-    msg_list[msg_id].recv_callback = msg_callback;
-}
-
-/**
  * @brief 注册数据发送句柄
  *
  * @param msg_id 数据含义
@@ -120,6 +103,22 @@ void message_register_send_uart(msg_id_t msg_id, UART_HandleTypeDef *huart,
         msg->send_buf_semp = xSemaphoreCreateMutex();
     }
 #endif /* MSG_ENABLE_RTOS */
+}
+
+/**
+ * @brief 注册接收回调函数指针
+ *
+ * @param msg_id 数据含义
+ * @param msg_callback 回调指针
+ * @note 如果更换回调函数, 重新调用该函数即可
+ */
+void message_register_recv_callback(msg_id_t msg_id,
+                                    msg_recv_callback_t msg_callback) {
+    if (msg_id >= MSG_ID_RESERVE_LEN) {
+        return;
+    }
+
+    msg_list[msg_id].recv_callback = msg_callback;
 }
 
 /**
@@ -176,7 +175,7 @@ void message_send_data(msg_id_t msg_id, msg_type_t data_type, uint8_t *data,
 #endif /* MSG_ENABLE_RTOS */
 
     if (msg->send_buf_len <= data_len + 3) {
-        /* 不够, 扩容到原来的 2 倍 */
+        /* 不够, 扩容当前数据长度的 2 倍 */
         uint8_t *new_buf = (uint8_t *)MSG_REALLOC(msg->send_buf, data_len * 2);
         if (new_buf == NULL) {
 #if MSG_ENABLE_STATISTICS
@@ -188,8 +187,9 @@ void message_send_data(msg_id_t msg_id, msg_type_t data_type, uint8_t *data,
         msg->send_buf = new_buf;
         msg->send_buf_len = data_len * 2;
     } else if ((data_len + 3) * 3 <= msg->send_buf_len) {
-        /* 长度小于 1/3, 缩容 1/2 */
-        uint8_t *new_buf = (uint8_t *)MSG_REALLOC(msg->send_buf, data_len / 2);
+        /* 长度小于 1/3, 缩容到原来的 1/2 */
+        uint8_t *new_buf =
+            (uint8_t *)MSG_REALLOC(msg->send_buf, msg->send_buf_len / 2);
         if (new_buf == NULL) {
 #if MSG_ENABLE_STATISTICS
             ++msg->mem_fail;
@@ -198,7 +198,7 @@ void message_send_data(msg_id_t msg_id, msg_type_t data_type, uint8_t *data,
         }
 
         msg->send_buf = new_buf;
-        msg->send_buf_len = data_len / 2;
+        msg->send_buf_len = msg->send_buf_len / 2;
     }
 
     uint8_t *send_buf = (uint8_t *)msg->send_buf;
@@ -290,6 +290,8 @@ static void message_data_enqueue(struct msg_instance *msg, uint32_t recv_len) {
 #endif /* MSG_ENABLE_STATISTICS */
             return;
         }
+        msg->tail->len = 0;
+        msg->tail->next = NULL;
         msg->head = msg->tail;
 #if MSG_ENABLE_STATISTICS
         ++msg->fifo_len;
@@ -320,7 +322,7 @@ static void message_data_enqueue(struct msg_instance *msg, uint32_t recv_len) {
 #ifdef MSG_ESC
         if (msg->escape) {
             msg->escape = false;
-            /* 这是被转移的字符, 避免执行到下面的结束标识被当成结束符处理 */
+            /* 这是被转义的字符, 避免执行到下面的结束标识被当成结束符处理 */
             continue;
         }
 #endif /* MSG_ESC */
