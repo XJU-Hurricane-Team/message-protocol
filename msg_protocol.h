@@ -55,9 +55,6 @@
 /* 始能统计, 启用后统计接收成功错误计数, 队列最大深度等信息 */
 #define MSG_ENABLE_STATISTICS  1
 
-/* 初始发送缓冲区大小 */
-#define MSG_SEND_BUF_INIT_SIZE 8
-
 /* 内存分配相关 */
 #define MSG_MALLOC(x)          malloc(x)
 #define MSG_REALLOC(p, x)      realloc(p, x)
