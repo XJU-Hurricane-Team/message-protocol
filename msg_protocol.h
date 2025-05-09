@@ -64,7 +64,7 @@
  * @brief 数据含义
  */
 typedef enum {
-    MSG_ID_REMOTE,
+    MSG_ID_DEMO,
 
     MSG_ID_RESERVE_LEN /*!< 保留位, 用于定义数据长度 */
 } msg_id_t;

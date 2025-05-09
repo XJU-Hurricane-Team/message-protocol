@@ -2,7 +2,7 @@
 
 将通信数据进行封装，允许注册不同类型的消息，并为每种消息设立独立的回调函数进行数据处理。
 
-demo 程序详见：[f429-demo 分支](https://github.com/XJU-Hurricane-Team/message-protocol/tree/f429-demo)
+demo 程序详见：[f429-demo 分支](https://github.com/XJU-Hurricane-Team/message-protocol/f429-demo)
 
 ## 数据帧格式：
 
