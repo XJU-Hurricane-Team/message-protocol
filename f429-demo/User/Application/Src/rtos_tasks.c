@@ -41,7 +41,7 @@ void start_task(void *pvParameters) {
     taskENTER_CRITICAL();
 
     xTaskCreate(task1, "task1", 128, NULL, 2, &task1_handle);
-    xTaskCreate(task2, "task2", 128, NULL, 2, &task2_handle);
+    xTaskCreate(task2, "task2", 128, NULL, 3, &task2_handle);
     xTaskCreate(task3, "task3", 128, NULL, 2, &task3_handle);
 
     vTaskDelete(start_task_handle);
@@ -88,11 +88,12 @@ static void msg_callback_demo(uint32_t msg_length, uint8_t msg_id_type,
 void task2(void *pvParameters) {
     UNUSED(pvParameters);
 
-    message_register_polling_uart(MSG_ID_DEMO, &usart3_handle, 300);
+    message_register_polling_uart(MSG_ID_DEMO, &usart3_handle, 300, 512);
     message_register_recv_callback(MSG_ID_DEMO, msg_callback_demo);
 
     while (1) {
         message_polling_data();
+        vTaskDelay(1);
     }
 }
 
@@ -106,7 +107,7 @@ void task3(void *pvParameters) {
     printf("Welcome use message protocol! \n"
            "Press KEY0 send 0x00 ~ 0xFF (256 byte). \n");
 
-    size_t size = 255;
+    size_t size = 120;
     uint8_t *test_data = (uint8_t *)pvPortMalloc(sizeof(uint8_t) * size);
 
     message_register_send_uart(MSG_ID_DEMO, &uart4_handle, size);

@@ -2,8 +2,8 @@
  * @file    ETH_STM32F4xx.h
  * @author  Deadline039
  * @brief   Chip Support Package of Ethernet on STM32F4xx
- * @version 1.0
- * @date    2024-11-15
+ * @version 3.3.2
+ * @date    2025-04-27
  * @ref     https://github.com/libdriver/lan8720/
  */
 

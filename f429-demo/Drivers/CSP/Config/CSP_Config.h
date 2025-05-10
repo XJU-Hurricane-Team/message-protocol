@@ -274,7 +274,7 @@
 #endif  /* USART2_RTS_ID */
 
 //   <e> Enable USART2 Interrupt
-#define USART2_IT_ENABLE 0
+#define USART2_IT_ENABLE 1
 
 #if USART2_IT_ENABLE
 
@@ -289,7 +289,7 @@
 #endif /* USART2_IT_ENABLE */
 
 //   <e> Enable USART2 DMA RX
-#define USART2_RX_DMA             0
+#define USART2_RX_DMA             1
 
 #if USART2_RX_DMA
 
@@ -334,7 +334,7 @@
 #endif  /* USART2_RX_DMA */
 
 //   <e> Enable USART2 DMA TX
-#define USART2_TX_DMA             0
+#define USART2_TX_DMA             1
 
 #if USART2_TX_DMA
 
@@ -767,13 +767,13 @@
 
 // <e> UART5 (Universal synchronous asynchronous receiver transmitter)
 
-#define UART5_ENABLE 0 
+#define UART5_ENABLE 1
 
 #if UART5_ENABLE
 
 //   <o> UART5_TX Pin
 //       <0=>Not Used <1=>PB6 <2=>PB9 <3=>PB13 <4=>PC12 <5=>PE8 
-#define UART5_TX_ID 0
+#define UART5_TX_ID 4
 
 #if (UART5_TX_ID == 0)
 #define UART5_TX 0
@@ -803,7 +803,7 @@
 
 //   <o> UART5_RX Pin
 //       <0=>Not Used <1=>PB5 <2=>PB8 <3=>PB12 <4=>PD2 <5=>PE7 
-#define UART5_RX_ID 0
+#define UART5_RX_ID 4
 
 #if (UART5_RX_ID == 0)
 #define UART5_RX 0
@@ -860,7 +860,7 @@
 #endif  /* UART5_RTS_ID */
 
 //   <e> Enable UART5 Interrupt
-#define UART5_IT_ENABLE 0
+#define UART5_IT_ENABLE 1
 
 #if UART5_IT_ENABLE
 
@@ -875,7 +875,7 @@
 #endif /* UART5_IT_ENABLE */
 
 //   <e> Enable UART5 DMA RX
-#define UART5_RX_DMA             0
+#define UART5_RX_DMA             1
 
 #if UART5_RX_DMA
 
@@ -920,7 +920,7 @@
 #endif  /* UART5_RX_DMA */
 
 //   <e> Enable UART5 DMA TX
-#define UART5_TX_DMA             0
+#define UART5_TX_DMA             1
 
 #if UART5_TX_DMA
 
@@ -937,7 +937,7 @@
 //     <o> Channel
 //      <8=>8 <4=>4 
 //     <i>  Selects DMA Channel
-#define UART5_TX_DMA_CHANNEL     8
+#define UART5_TX_DMA_CHANNEL     4
 
 //     <o> Priority
 //      <0=>Low <1=>Medium <2=>High <3=>Very High
@@ -965,13 +965,13 @@
 
 // <e> USART6 (Universal asynchronous receiver transmitter)
 
-#define USART6_ENABLE 0 
+#define USART6_ENABLE 0
 
 #if USART6_ENABLE
 
 //   <o> USART6_TX Pin
 //       <0=>Not Used <1=>PA11 <2=>PC6 <3=>PG14 
-#define USART6_TX_ID 0
+#define USART6_TX_ID 2
 
 #if (USART6_TX_ID == 0)
 #define USART6_TX 0
@@ -993,7 +993,7 @@
 
 //   <o> USART6_RX Pin
 //       <0=>Not Used <1=>PA12 <2=>PC7 <3=>PG9 
-#define USART6_RX_ID 0
+#define USART6_RX_ID 2
 
 #if (USART6_RX_ID == 0)
 #define USART6_RX 0
