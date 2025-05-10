@@ -15,10 +15,10 @@ extern "C" {
 
 #include <CSP_Config.h>
 
-#define KEY0_GPIO_PORT H
+#define KEY0_GPIO_PORT C
 #define KEY0_GPIO_PIN  GPIO_PIN_3
 
-#define KEY1_GPIO_PORT H
+#define KEY1_GPIO_PORT C
 #define KEY1_GPIO_PIN  GPIO_PIN_2
 
 #define KEY2_GPIO_PORT C

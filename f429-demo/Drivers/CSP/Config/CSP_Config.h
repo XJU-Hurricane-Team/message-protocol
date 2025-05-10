@@ -385,7 +385,7 @@
 
 //   <o> USART3_TX Pin
 //       <0=>Not Used <1=>PB10 <2=>PC10 <3=>PD8 
-#define USART3_TX_ID 1
+#define USART3_TX_ID 3
 
 #if (USART3_TX_ID == 0)
 #define USART3_TX 0
@@ -407,7 +407,7 @@
 
 //   <o> USART3_RX Pin
 //       <0=>Not Used <1=>PB11 <2=>PC5 <3=>PC11 <4=>PD9 
-#define USART3_RX_ID 1
+#define USART3_RX_ID 4
 
 #if (USART3_RX_ID == 0)
 #define USART3_RX 0
