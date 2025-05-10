@@ -254,7 +254,8 @@ extern uint32_t FreeRTOSRunTimeTicks;
 
 /* 断言 */
 #include <stdio.h>
-#define vAssertCalled(char, int) printf("Error: %s, %d\r\n", char, int)
+
+extern void vAssertCalled(const char *pcFile, unsigned int ulLine);
 #define configASSERT(x)                                                        \
     if ((x) == 0)                                                              \
     vAssertCalled(__FILE__, __LINE__)
