@@ -20,6 +20,7 @@ void bsp_init(void) {
     usart2_init(115200);
     usart3_init(115200);
     uart4_init(115200);
+    uart5_init(115200);
     led_init();
     key_init();
     bsp_crc32_init();

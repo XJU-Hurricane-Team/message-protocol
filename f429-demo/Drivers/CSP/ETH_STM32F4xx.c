@@ -2,8 +2,8 @@
  * @file    ETH_STM32F4xx.c
  * @author  Deadline039
  * @brief   Chip Support Package of Ethernet on STM32F4xx
- * @version 1.0
- * @date    2024-10-22
+ * @version 3.3.2
+ * @date    2025-04-27
  */
 
 #include <CSP_Config.h>
@@ -23,8 +23,8 @@ static ETH_DMADescTypeDef dma_tx_dscr_tab[ETH_TX_DESC_CNT];
  * @brief Ethernet initialization.
  *
  * @return status code
- * @retval - 0: success
- * @retval - 1: init failed
+ *  @retval - 0: success
+ *  @retval - 1: init failed
  */
 uint8_t eth_init(uint8_t mac[6]) {
     eth_handle.Instance = ETH;
@@ -222,8 +222,8 @@ void HAL_ETH_MspDeInit(ETH_HandleTypeDef *heth) {
  * @brief Ethernet deinit.
  *
  * @return status code
- * @retval - 0: success
- * @retval - 1: init failed
+ *  @retval - 0: success
+ *  @retval - 1: init failed
  */
 uint8_t eth_deinit(void) {
     if (HAL_ETH_DeInit(&eth_handle) != HAL_OK) {
@@ -238,8 +238,8 @@ uint8_t eth_deinit(void) {
  *
  * @param reg The register address
  * @return status code
- * @retval - 0: success
- * @retval - 1: init failed
+ *  @retval - 0: success
+ *  @retval - 1: init failed
  */
 uint32_t eth_read_phy(uint16_t reg) {
     uint32_t regval;

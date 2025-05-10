@@ -1,11 +1,9 @@
 /**
  * @file    CAN_STM32F4xx.c
  * @author  Deadline039
- * @brief   Chip Support Package of FDCAN on STM32F4xx
- * @version 1.0
- * @date    2025-02-27
- * @note    We will support FDCAN in the feature.
- *          Generate Automatically. 
+ * @brief   Chip Support Package of CAN on STM32F4xx
+ * @version 3.3.2
+ * @date    2025-04-27
  */
 
 #include <CSP_Config.h>
@@ -38,17 +36,17 @@ CAN_HandleTypeDef can1_handle = {.Instance = CAN1,
  * @param prop_delay The propagation delay of bus, include cable and can
  *                   transceiver. Unit: ns.
  * @return CAN init status.
- * @retval - 0: `CAN_INIT_OK`:           Success.
- * @retval - 1: `CAN_INIT_RATE_ERR`:     Can not satisfied this baudrate in this
+ *  @retval - 0: `CAN_INIT_OK`:           Success.
+ *  @retval - 1: `CAN_INIT_RATE_ERR`:     Can not satisfied this baudrate in this
  *                                       condition.
- * @retval - 2: `CAN_INIT_FILTER_FAIL`:  CAN Filter init failed.
- * @retval - 3: `CAN_INIT_FAIL`:         CAN hardware init failed.
- * @retval - 4: `CAN_INIT_START_FAIL`:   CAN start failed.
- * @retval - 5: `CAN_INIT_NOTIFY_FAIL`:  Enable CAN receive notify failed.
- * @retval - 6: `CAN_INITED`:            This can is inited.
+ *  @retval - 2: `CAN_INIT_FILTER_FAIL`:  CAN Filter init failed.
+ *  @retval - 3: `CAN_INIT_FAIL`:         CAN hardware init failed.
+ *  @retval - 4: `CAN_INIT_START_FAIL`:   CAN start failed.
+ *  @retval - 5: `CAN_INIT_NOTIFY_FAIL`:  Enable CAN receive notify failed.
+ *  @retval - 6: `CAN_INITED`:            This can is inited.
  */
 uint8_t can1_init(uint32_t baud_rate, uint32_t prop_delay) {
-    if (__HAL_RCC_CAN1_IS_CLK_ENABLED()) {
+    if (HAL_CAN_GetState(&can1_handle) != HAL_CAN_STATE_RESET) {
         return CAN_INITED;
     }
 
@@ -160,12 +158,12 @@ void CAN1_SCE_IRQHandler(void) {
  * @brief CAN1 deinitialization.
  *
  * @return Deinit status.
- * @retval - 0: `CAN_DEINIT_OK`:   Success.
- * @retval - 1: `CAN_DEINIT_FAIL`: CAN hardware deinit failed.
- * @retval - 2: `CAN_NO_INIT`:     This can is no init.
+ *  @retval - 0: `CAN_DEINIT_OK`:   Success.
+ *  @retval - 1: `CAN_DEINIT_FAIL`: CAN hardware deinit failed.
+ *  @retval - 2: `CAN_NO_INIT`:     This can is no init.
  */
 uint8_t can1_deinit(void) {
-    if (__HAL_RCC_CAN1_CLK_DISABLE()) {
+    if (HAL_CAN_GetState(&can1_handle) == HAL_CAN_STATE_RESET) {
         return CAN_NO_INIT;
     }
 
@@ -211,17 +209,17 @@ CAN_HandleTypeDef can2_handle = {.Instance = CAN2,
  * @param prop_delay The propagation delay of bus, include cable and can
  *                   transceiver. Unit: ns.
  * @return CAN init status.
- * @retval - 0: `CAN_INIT_OK`:           Success.
- * @retval - 1: `CAN_INIT_RATE_ERR`:     Can not satisfied this baudrate in this
+ *  @retval - 0: `CAN_INIT_OK`:           Success.
+ *  @retval - 1: `CAN_INIT_RATE_ERR`:     Can not satisfied this baudrate in this
  *                                       condition.
- * @retval - 2: `CAN_INIT_FILTER_FAIL`:  CAN Filter init failed.
- * @retval - 3: `CAN_INIT_FAIL`:         CAN hardware init failed.
- * @retval - 4: `CAN_INIT_START_FAIL`:   CAN start failed.
- * @retval - 5: `CAN_INIT_NOTIFY_FAIL`:  Enable CAN receive notify failed.
- * @retval - 6: `CAN_INITED`:            This can is inited.
+ *  @retval - 2: `CAN_INIT_FILTER_FAIL`:  CAN Filter init failed.
+ *  @retval - 3: `CAN_INIT_FAIL`:         CAN hardware init failed.
+ *  @retval - 4: `CAN_INIT_START_FAIL`:   CAN start failed.
+ *  @retval - 5: `CAN_INIT_NOTIFY_FAIL`:  Enable CAN receive notify failed.
+ *  @retval - 6: `CAN_INITED`:            This can is inited.
  */
 uint8_t can2_init(uint32_t baud_rate, uint32_t prop_delay) {
-    if (__HAL_RCC_CAN2_IS_CLK_ENABLED()) {
+    if (HAL_CAN_GetState(&can2_handle) != HAL_CAN_STATE_RESET) {
         return CAN_INITED;
     }
 
@@ -333,12 +331,12 @@ void CAN2_SCE_IRQHandler(void) {
  * @brief CAN2 deinitialization.
  *
  * @return Deinit status.
- * @retval - 0: `CAN_DEINIT_OK`:   Success.
- * @retval - 1: `CAN_DEINIT_FAIL`: CAN hardware deinit failed.
- * @retval - 2: `CAN_NO_INIT`:     This can is no init.
+ *  @retval - 0: `CAN_DEINIT_OK`:   Success.
+ *  @retval - 1: `CAN_DEINIT_FAIL`: CAN hardware deinit failed.
+ *  @retval - 2: `CAN_NO_INIT`:     This can is no init.
  */
 uint8_t can2_deinit(void) {
-    if (__HAL_RCC_CAN2_CLK_DISABLE()) {
+    if (HAL_CAN_GetState(&can2_handle) == HAL_CAN_STATE_RESET) {
         return CAN_NO_INIT;
     }
 
@@ -384,17 +382,17 @@ CAN_HandleTypeDef can3_handle = {.Instance = CAN3,
  * @param prop_delay The propagation delay of bus, include cable and can
  *                   transceiver. Unit: ns.
  * @return CAN init status.
- * @retval - 0: `CAN_INIT_OK`:           Success.
- * @retval - 1: `CAN_INIT_RATE_ERR`:     Can not satisfied this baudrate in this
+ *  @retval - 0: `CAN_INIT_OK`:           Success.
+ *  @retval - 1: `CAN_INIT_RATE_ERR`:     Can not satisfied this baudrate in this
  *                                       condition.
- * @retval - 2: `CAN_INIT_FILTER_FAIL`:  CAN Filter init failed.
- * @retval - 3: `CAN_INIT_FAIL`:         CAN hardware init failed.
- * @retval - 4: `CAN_INIT_START_FAIL`:   CAN start failed.
- * @retval - 5: `CAN_INIT_NOTIFY_FAIL`:  Enable CAN receive notify failed.
- * @retval - 6: `CAN_INITED`:            This can is inited.
+ *  @retval - 2: `CAN_INIT_FILTER_FAIL`:  CAN Filter init failed.
+ *  @retval - 3: `CAN_INIT_FAIL`:         CAN hardware init failed.
+ *  @retval - 4: `CAN_INIT_START_FAIL`:   CAN start failed.
+ *  @retval - 5: `CAN_INIT_NOTIFY_FAIL`:  Enable CAN receive notify failed.
+ *  @retval - 6: `CAN_INITED`:            This can is inited.
  */
 uint8_t can3_init(uint32_t baud_rate, uint32_t prop_delay) {
-    if (__HAL_RCC_CAN3_IS_CLK_ENABLED()) {
+    if (HAL_CAN_GetState(&can3_handle) != HAL_CAN_STATE_RESET) {
         return CAN_INITED;
     }
 
@@ -506,12 +504,12 @@ void CAN3_SCE_IRQHandler(void) {
  * @brief CAN3 deinitialization.
  *
  * @return Deinit status.
- * @retval - 0: `CAN_DEINIT_OK`:   Success.
- * @retval - 1: `CAN_DEINIT_FAIL`: CAN hardware deinit failed.
- * @retval - 2: `CAN_NO_INIT`:     This can is no init.
+ *  @retval - 0: `CAN_DEINIT_OK`:   Success.
+ *  @retval - 1: `CAN_DEINIT_FAIL`: CAN hardware deinit failed.
+ *  @retval - 2: `CAN_NO_INIT`:     This can is no init.
  */
 uint8_t can3_deinit(void) {
-    if (__HAL_RCC_CAN3_CLK_DISABLE()) {
+    if (HAL_CAN_GetState(&can3_handle) == HAL_CAN_STATE_RESET) {
         return CAN_NO_INIT;
     }
 
@@ -556,12 +554,12 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan) {
 
         CSP_GPIO_CLK_ENABLE(CAN3_TX_PORT);
         gpio_init_struct.Pin = CAN3_TX_PIN;
-        gpio_init_struct.Alternate = CAN3_TX_AF;
+        gpio_init_struct.Alternate = CAN3_TX_GPIO_AF;
         HAL_GPIO_Init(CSP_GPIO_PORT(CAN3_TX_PORT), &gpio_init_struct);
 
         CSP_GPIO_CLK_ENABLE(CAN3_RX_PORT);
         gpio_init_struct.Pin = CAN3_RX_PIN;
-        gpio_init_struct.Alternate = CAN3_RX_AF;
+        gpio_init_struct.Alternate = CAN3_RX_GPIO_AF;
         HAL_GPIO_Init(CSP_GPIO_PORT(CAN3_RX_PORT), &gpio_init_struct);
         __HAL_RCC_CAN3_CLK_ENABLE();
 
@@ -597,12 +595,12 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan) {
 
     CSP_GPIO_CLK_ENABLE(CAN1_TX_PORT);
     gpio_init_struct.Pin = CAN1_TX_PIN;
-    gpio_init_struct.Alternate = CAN1_TX_AF;
+    gpio_init_struct.Alternate = CAN1_TX_GPIO_AF;
     HAL_GPIO_Init(CSP_GPIO_PORT(CAN1_TX_PORT), &gpio_init_struct);
 
     CSP_GPIO_CLK_ENABLE(CAN1_RX_PORT);
     gpio_init_struct.Pin = CAN1_RX_PIN;
-    gpio_init_struct.Alternate = CAN1_RX_AF;
+    gpio_init_struct.Alternate = CAN1_RX_GPIO_AF;
     HAL_GPIO_Init(CSP_GPIO_PORT(CAN1_RX_PORT), &gpio_init_struct);
 
 #if CAN1_TX_IT_ENABLE
@@ -632,13 +630,13 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan) {
 
     CSP_GPIO_CLK_ENABLE(CAN2_TX_PORT);
     gpio_init_struct.Pin = CAN2_TX_PIN;
-    gpio_init_struct.Alternate = CAN2_TX_AF;
+    gpio_init_struct.Alternate = CAN2_TX_GPIO_AF;
 
     HAL_GPIO_Init(CSP_GPIO_PORT(CAN2_TX_PORT), &gpio_init_struct);
 
     CSP_GPIO_CLK_ENABLE(CAN2_RX_PORT);
     gpio_init_struct.Pin = CAN2_RX_PIN;
-    gpio_init_struct.Alternate = CAN2_RX_AF;
+    gpio_init_struct.Alternate = CAN2_RX_GPIO_AF;
     HAL_GPIO_Init(CSP_GPIO_PORT(CAN2_RX_PORT), &gpio_init_struct);
 
 #if CAN2_TX_IT_ENABLE
@@ -749,7 +747,7 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef *hcan) {
 }
 
 /**
- * @brief Calcuate parameters of specific CAN Classic baudrate.
+ * @brief Calculate parameters of specific CAN Classic baudrate.
  *
  * @param[in] baud_rate CAN band rate. Unit: bps.
  * @param[in] prop_delay The propagation delay of bus, include cable and can
@@ -759,9 +757,9 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef *hcan) {
  * @param[out] tsjw Syncronisation Jump Width
  * @param[out] tseg1 Time of segment 1.
  * @param[out] tseg2 Time of segment 2.
- * @return Calcuate status.
- * @retval - 0: No error;
- * @retval - 1: Can not satisfied this baudrate in this condition.
+ * @return Calculate status.
+ *  @retval - 0: No error;
+ *  @retval - 1: Can not satisfied this baudrate in this condition.
  */
 uint8_t can_rate_calc(uint32_t baud_rate, uint32_t prop_delay,
                       uint32_t base_freq, uint32_t *prescale, uint32_t *tsjw,
@@ -884,11 +882,11 @@ CAN_HandleTypeDef *can_get_handle(can_selected_t can_selected) {
  * @param len Specific message length.
  * @param msg Specific message content.
  * @return Send status.
- * @retval - 0: Success.
- * @retval - 1: Send error.
- * @retval - 2: Timeout.
- * @retval - 3: Parameter invalid.
- * @retval - 4: This CAN is not initialized.
+ *  @retval - 0: Success.
+ *  @retval - 1: Send error.
+ *  @retval - 2: Timeout.
+ *  @retval - 3: Parameter invalid.
+ *  @retval - 4: This CAN is not initialized.
  */
 uint8_t can_send_message(can_selected_t can_selected, uint32_t can_ide,
                          uint32_t id, uint8_t len, const uint8_t *msg) {
@@ -908,7 +906,7 @@ uint8_t can_send_message(can_selected_t can_selected, uint32_t can_ide,
     uint16_t wait_time = 0;
     uint32_t tx_mail_box = CAN_TX_MAILBOX0;
 
-    static CAN_TxHeaderTypeDef tx_header;
+    CAN_TxHeaderTypeDef tx_header = {0};
     tx_header.IDE = can_ide;
     tx_header.RTR = CAN_RTR_DATA;
     tx_header.DLC = len;
@@ -942,11 +940,11 @@ uint8_t can_send_message(can_selected_t can_selected, uint32_t can_ide,
  * @param len Specific message length.
  * @param msg Specific message content.
  * @return Send status.
- * @retval - 0: Success.
- * @retval - 1: Send error.
- * @retval - 2: Timeout.
- * @retval - 3: Parameter invalid.
- * @retval - 4: This CAN is not initialized.
+ *  @retval - 0: Success.
+ *  @retval - 1: Send error.
+ *  @retval - 2: Timeout.
+ *  @retval - 3: Parameter invalid.
+ *  @retval - 4: This CAN is not initialized.
  */
 uint8_t can_send_remote(can_selected_t can_selected, uint32_t can_ide,
                         uint32_t id, uint8_t len, const uint8_t *msg) {
@@ -966,7 +964,7 @@ uint8_t can_send_remote(can_selected_t can_selected, uint32_t can_ide,
     uint16_t wait_time = 0;
     uint32_t tx_mail_box = CAN_TX_MAILBOX0;
 
-    static CAN_TxHeaderTypeDef tx_header;
+    CAN_TxHeaderTypeDef tx_header = {0};
     tx_header.IDE = can_ide;
     tx_header.RTR = CAN_RTR_REMOTE;
     tx_header.DLC = len;

@@ -2,7 +2,7 @@
  * @file    msg_protocol.c
  * @author  Deadline039
  * @brief   消息协议以及收发
- * @version 2.2
+ * @version 2.3
  * @date    2024-03-01
  */
 
@@ -21,22 +21,31 @@
 #endif /* __GNUC__ */
 
 /**
- * @brief 消息包 FIFO 节点
+ * @brief 判断是否是 2 的幂次方
+ * 
+ * @param n 数字
+ * @retval - 0:   不是
+ * @retval - 其他: 是
+ * 
  */
-typedef struct __fifo_node {
-    uint32_t len;             /*!< 当前节点数据量大小 */
-    struct __fifo_node *next; /*!< 下一个 FIFO 节点 */
-#ifdef __GNUC__
-    uint8_t data[0]; /*!< 数据缓冲区 */
-#else                /* __GNUC__ */
-    uint8_t data[]; /*!< 数据缓冲区 */
-#endif               /* __GNUC__ */
-} fifo_node_t;
+static inline uint32_t is_pow_of_2(uint32_t n) {
+    return (0 != n) && (0 == (n & (n - 1)));
+}
 
 /**
- * @brief 消息实例
+ * @brief 环形缓冲区
  */
-static struct msg_instance {
+typedef struct {
+    uint32_t size;          /*!< 缓冲区大小 */
+    uint32_t mask;          /*!< 大小掩码 */
+    uint8_t frame_len;      /*!< 帧长度 */
+    bool new_frame;         /*!< 是否是新的一帧 (写长度用) */
+    volatile uint32_t head; /*!< 头指针 */
+    volatile uint32_t tail; /*!< 尾指针 */
+    uint8_t buf[0];         /*!< 缓冲区 */
+} msg_fifo_t;
+
+struct msg_instance {
     msg_recv_callback_t recv_callback; /*!< 接收回调函数 */
     UART_HandleTypeDef *send_uart;     /*!< 发送串口句柄 */
     UART_HandleTypeDef *recv_uart;     /*!< 接收串口句柄 */
@@ -51,23 +60,26 @@ static struct msg_instance {
     uint8_t *recv_buf;      /*!< 接收缓冲区 */
     uint32_t recv_buf_size; /*!< 接收缓冲区大小 */
 
-    fifo_node_t *head; /*!< 接收队列头指针 */
-    fifo_node_t *tail; /*!< 接收队列尾指针 */
-
 #ifdef MSG_ESC
     bool escape; /*!< 是否要将下一个字符转义 */
 #endif           /* MSG_ESC */
 
+    msg_fifo_t *fifo;          /*!< 接收缓冲区 */
+    uint32_t fifo_element_len; /*!< 当前队列元素个数 */
+
 #if MSG_ENABLE_STATISTICS
+    uint32_t send_count; /*!< 发送计数 */
+
     uint32_t recv_success; /*!< 接收成功计数 */
     uint32_t recv_error;   /*!< 接收错误计数 */
 
-    uint32_t fifo_len;     /*!< 当前队列长度 */
-    uint32_t max_fifo_len; /*!< 最大队列长度 */
+    uint32_t max_fifo_element_len; /*!< 最大队列元素个数 */
+    uint32_t fifo_overflow;        /*!< 队列溢出清空计数 */
+#endif                             /* MSG_ENABLE_STATISTICS */
+};
 
-    uint32_t mem_fail; /*!< 内存分配失败计数 */
-#endif                 /* MSG_ENABLE_STATISTICS */
-} msg_list[MSG_ID_RESERVE_LEN];
+struct msg_instance *msg_list[MSG_ID_RESERVE_LEN];
+static msg_fifo_t *msg_fifo_init(uint32_t fifo_size);
 
 /**
  * @brief 注册数据发送句柄
@@ -82,7 +94,13 @@ void message_register_send_uart(msg_id_t msg_id, UART_HandleTypeDef *huart,
         return;
     }
 
-    struct msg_instance *msg = &msg_list[msg_id];
+    if (msg_list[msg_id] == NULL) {
+        msg_list[msg_id] =
+            (struct msg_instance *)MSG_MALLOC(sizeof(struct msg_instance));
+        memset(msg_list[msg_id], 0, sizeof(struct msg_instance));
+    }
+
+    struct msg_instance *msg = msg_list[msg_id];
 
     msg->send_uart = huart;
     if (msg->send_buf != NULL) {
@@ -91,9 +109,6 @@ void message_register_send_uart(msg_id_t msg_id, UART_HandleTypeDef *huart,
 
     msg->send_buf = (uint8_t *)MSG_MALLOC(buf_size);
     if (msg->send_buf == NULL) {
-#if MSG_ENABLE_STATISTICS
-        ++msg->mem_fail;
-#endif /* MSG_ENABLE_STATISTICS */
         return;
     }
 
@@ -118,7 +133,13 @@ void message_register_recv_callback(msg_id_t msg_id,
         return;
     }
 
-    msg_list[msg_id].recv_callback = msg_callback;
+    if (msg_list[msg_id] == NULL) {
+        msg_list[msg_id] =
+            (struct msg_instance *)MSG_MALLOC(sizeof(struct msg_instance));
+        memset(msg_list[msg_id], 0, sizeof(struct msg_instance));
+    }
+
+    msg_list[msg_id]->recv_callback = msg_callback;
 }
 
 /**
@@ -126,24 +147,38 @@ void message_register_recv_callback(msg_id_t msg_id,
  *
  * @param msg_id 数据含义
  * @param huart 接收串口句柄
- * @param buf_size 缓冲区大小
+ * @param buf_size 串口缓冲区大小
+ * @param fifo_size 队列大小 (必须是 2 的幂次方! )
  */
 void message_register_polling_uart(msg_id_t msg_id, UART_HandleTypeDef *huart,
-                                   uint32_t buf_size) {
+                                   uint32_t buf_size, uint32_t fifo_size) {
     if (msg_id >= MSG_ID_RESERVE_LEN) {
         return;
     }
 
-    struct msg_instance *msg = &msg_list[msg_id];
+    if (is_pow_of_2(fifo_size) == 0) {
+        /* 不是 2 的幂次方 */
+        return;
+    }
+
+    if (msg_list[msg_id] == NULL) {
+        msg_list[msg_id] =
+            (struct msg_instance *)MSG_MALLOC(sizeof(struct msg_instance));
+        memset(msg_list[msg_id], 0, sizeof(struct msg_instance));
+    }
+
+    struct msg_instance *msg = msg_list[msg_id];
     msg->recv_uart = huart;
     msg->recv_buf = (uint8_t *)MSG_MALLOC(buf_size);
     if (msg->recv_buf == NULL) {
-#if MSG_ENABLE_STATISTICS
-        ++msg->mem_fail;
-#endif /* MSG_ENABLE_STATISTICS */
         return;
     }
     msg->recv_buf_size = buf_size;
+
+    msg->fifo = msg_fifo_init(fifo_size);
+    if (msg->fifo == NULL) {
+        return;
+    }
 }
 
 /**
@@ -164,7 +199,11 @@ void message_send_data(msg_id_t msg_id, msg_type_t data_type, uint8_t *data,
         return;
     }
 
-    struct msg_instance *msg = &msg_list[msg_id];
+    if (msg_list[msg_id] == NULL) {
+        return;
+    }
+
+    struct msg_instance *msg = msg_list[msg_id];
 
     if (msg->send_uart == NULL || msg->send_buf == NULL) {
         return;
@@ -178,9 +217,6 @@ void message_send_data(msg_id_t msg_id, msg_type_t data_type, uint8_t *data,
         /* 不够, 扩容当前数据长度的 2 倍 */
         uint8_t *new_buf = (uint8_t *)MSG_REALLOC(msg->send_buf, data_len * 2);
         if (new_buf == NULL) {
-#if MSG_ENABLE_STATISTICS
-            ++msg->mem_fail;
-#endif /* MSG_ENABLE_STATISTICS */
             return;
         }
 
@@ -191,9 +227,6 @@ void message_send_data(msg_id_t msg_id, msg_type_t data_type, uint8_t *data,
         uint8_t *new_buf =
             (uint8_t *)MSG_REALLOC(msg->send_buf, msg->send_buf_len / 2);
         if (new_buf == NULL) {
-#if MSG_ENABLE_STATISTICS
-            ++msg->mem_fail;
-#endif /* MSG_ENABLE_STATISTICS */
             return;
         }
 
@@ -236,6 +269,10 @@ void message_send_data(msg_id_t msg_id, msg_type_t data_type, uint8_t *data,
         HAL_UART_Transmit(msg->send_uart, send_buf, buf_idx, 0xFFFF);
     }
 
+#if MSG_ENABLE_STATISTICS
+    ++msg->send_count;
+#endif /* MSG_ENABLE_STATISTICS */
+
 #if MSG_ENABLE_RTOS
     xSemaphoreGive(msg->send_buf_semp);
 #endif /* MSG_ENABLE_RTOS */
@@ -252,13 +289,16 @@ void message_polling_data(void) {
     struct msg_instance *msg;
     uint32_t recv_len;
     for (msg_id_t i = 0; i < MSG_ID_RESERVE_LEN; ++i) {
-        msg = &msg_list[i];
+        msg = msg_list[i];
+        if (msg == NULL) {
+            continue;
+        }
+
         if (msg->recv_uart == NULL) {
             continue;
         }
 
-        if (msg->recv_callback == NULL) {
-            /* 避免串口 fifo 溢出, 当没有回调函数的时候也要读一次 */
+        if (msg->fifo == NULL) {
             continue;
         }
 
@@ -281,26 +321,7 @@ void message_polling_data(void) {
  * @param recv_len 接收到的数据长度
  */
 static void message_data_enqueue(struct msg_instance *msg, uint32_t recv_len) {
-    if (msg->tail == NULL) {
-        msg->tail =
-            (fifo_node_t *)MSG_MALLOC(sizeof(fifo_node_t) + msg->recv_buf_size);
-        if (msg->tail == NULL) {
-#if MSG_ENABLE_STATISTICS
-            ++msg->mem_fail;
-#endif /* MSG_ENABLE_STATISTICS */
-            return;
-        }
-        msg->tail->len = 0;
-        msg->tail->next = NULL;
-        msg->head = msg->tail;
-#if MSG_ENABLE_STATISTICS
-        ++msg->fifo_len;
-#endif /* MSG_ENABLE_STATISTICS */
-    }
-
-    fifo_node_t *new_node = NULL;
-    fifo_node_t *tail = msg->tail;
-
+    msg_fifo_t *fifo = msg->fifo;
     for (uint32_t i = 0; i < recv_len; ++i) {
 #ifdef MSG_ESC
         if ((msg->recv_buf[i] == MSG_ESC) && (msg->escape == false)) {
@@ -309,14 +330,27 @@ static void message_data_enqueue(struct msg_instance *msg, uint32_t recv_len) {
             continue;
         }
 #endif /* MSG_ESC */
+        if (fifo->new_frame) {
+            /* 空一个字节写长度, 长度写 0 */
+            fifo->buf[fifo->tail & fifo->mask] = 0;
+            ++fifo->tail;
+            fifo->new_frame = false;
+        }
 
-        tail->data[tail->len] = msg->recv_buf[i];
-        ++tail->len;
+        /* 将数据写入队列 */
+        fifo->buf[fifo->tail & fifo->mask] = msg->recv_buf[i];
+        ++fifo->tail;
+        ++fifo->frame_len;
 
-        if (tail->len >= msg->recv_buf_size) {
-            /* 数据内容超出缓冲区大小, 长度 - 1, 末尾强制为结束标识 */
-            --tail->len;
-            tail->data[tail->len] = MSG_EOF;
+        if (fifo->size == (fifo->tail - fifo->head)) {
+            /* FIFO 已满, 先覆盖旧数据, 有新的帧直接清空 FIFO, 从头开始存 */
+            fifo->head = 0;
+            fifo->tail = 0;
+            msg->fifo_element_len = 0;
+            fifo->frame_len = 0;
+#if MSG_ENABLE_STATISTICS
+            ++msg->fifo_overflow;
+#endif /* MSG_ENABLE_STATISTICS */
         }
 
 #ifdef MSG_ESC
@@ -328,30 +362,22 @@ static void message_data_enqueue(struct msg_instance *msg, uint32_t recv_len) {
 #endif /* MSG_ESC */
 
         if (msg->recv_buf[i] == MSG_EOF) {
-            new_node = (fifo_node_t *)MSG_MALLOC(sizeof(fifo_node_t) +
-                                                 msg->recv_buf_size);
-            if (new_node == NULL) {
-#if MSG_ENABLE_STATISTICS
-                ++msg->mem_fail;
-#endif /* MSG_ENABLE_STATISTICS */
-                return;
-            }
+            /* 写入上帧长度, 算上 FIFO 元素大小 */
+            fifo->buf[(fifo->tail - fifo->frame_len - 1) & fifo->mask] =
+                fifo->frame_len + 1;
 
-            new_node->len = 0;
-            new_node->next = NULL;
-            /* 尾指针后移 */
-            tail->next = new_node;
-            msg->tail = new_node;
-            tail = msg->tail;
+            /* 帧长度清零 */
+            fifo->frame_len = 0;
 
-#if MSG_ENABLE_STATISTICS
-            ++msg->fifo_len;
-#endif /* MSG_ENABLE_STATISTICS */
+            /* 下次空出一个字节写 */
+            fifo->new_frame = true;
+
+            ++msg->fifo_element_len;
         }
 
 #if MSG_ENABLE_STATISTICS
-        if (msg->fifo_len > msg->max_fifo_len) {
-            msg->max_fifo_len = msg->fifo_len;
+        if (msg->fifo_element_len > msg->max_fifo_element_len) {
+            msg->max_fifo_element_len = msg->fifo_element_len;
         }
 #endif /* MSG_ENABLE_STATISTICS */
     }
@@ -359,50 +385,115 @@ static void message_data_enqueue(struct msg_instance *msg, uint32_t recv_len) {
 
 /**
  * @brief 消息数据出队并调用回调函数
- * 
+ *
  * @param msg 消息实例
  */
 static void message_data_dequeue(struct msg_instance *msg) {
-    fifo_node_t *head = msg->head;
-
-    if (head == NULL) {
+    if (msg->fifo_element_len == 0) {
+        /* 队列中没有元素 */
         return;
     }
 
-    if ((head->len == 0) || (head->data[head->len - 1] != MSG_EOF)) {
-        /* 当前 FIFO 节点数据不完整 */
-        return;
-    }
+    msg_fifo_t *fifo = msg->fifo;
+    uint8_t frame_len;
+    /* 回调消息 ID & type */
+    uint8_t call_id_type;
+    /* 回调消息数据 */
+    uint8_t *call_data;
+    /* 回调消息长度 */
+    uint32_t call_len;
+    /* 实际在缓冲区的位置指针 */
+    uint32_t head, tail;
 
-    fifo_node_t *current_head = head;
+    /* 队空条件: head == tail */
+    while (fifo->head != fifo->tail) {
+        /* 头存储的是帧长度 */
+        frame_len = fifo->buf[fifo->head & fifo->mask];
+        if (frame_len == 0) {
+            /* 最后一帧还没存完, 存完才会写长度, 已经结束了, 跳出循环 */
+            break;
+        }
 
-    if ((current_head->len - 3) == current_head->data[1]) {
-        /* 调用回调函数后释放头指针 */
-        if (msg->recv_callback != NULL) {
-            /* 数据内容去掉头标识, 长度和结束标识, 所以长度减去 3 字节 */
-            msg->recv_callback(current_head->len - 3, current_head->data[0],
-                               &current_head->data[2]);
+        if (fifo->head > fifo->tail) {
+            /* 正常不可能头比尾还大 */
+#if MSG_ENABLE_STATISTICS
+            ++msg->recv_error;
+#endif /* MSG_ENABLE_STATISTICS */
+            break;
+        }
+
+        head = fifo->head & fifo->mask;
+        tail = (fifo->head + frame_len) & fifo->mask;
+
+        /* 验证数据包长度与实际接收长度是否一致, 数据包第二个字节是长度
+         * 1 byte 标识, 1 byte 长度, 1 byte 结束符, 1 byte FIFO 元素大小
+         * 总共 4 byte. */
+        if ((frame_len - 4) != fifo->buf[(fifo->head + 2) & fifo->mask]) {
+            /* 不一致, 出队到下一个 */
+            fifo->head += frame_len;
+            --msg->fifo_element_len;
+#if MSG_ENABLE_STATISTICS
+            ++msg->recv_error;
+#endif /* MSG_ENABLE_STATISTICS */
+            continue;
+        }
+
+        if (tail < head) {
+            /* 数据在头尾, 分成两段, 直接复制到`recv_buf` (下一次读取就覆盖了) */
+            if (frame_len <= msg->recv_buf_size) {
+                /* 复制前半段 */
+                memcpy(msg->recv_buf, &fifo->buf[head], fifo->size - head);
+                /* 复制后半段 */
+                memcpy(&msg->recv_buf[fifo->size - head], &fifo->buf[0], tail);
+                call_id_type = msg->recv_buf[1];
+                call_len = frame_len - 4;
+                call_data = &msg->recv_buf[3];
+            } else {
+                /* 空间不够, 不复制, 出队到下一个 */
+                fifo->head += frame_len;
+                --msg->fifo_element_len;
+#if MSG_ENABLE_STATISTICS
+                ++msg->recv_error;
+#endif /* MSG_ENABLE_STATISTICS */
+                continue;
+            }
+        } else {
+            /* 完整的一帧没有被截断 */
+            call_id_type = fifo->buf[(fifo->head + 1) & fifo->mask];
+            call_len = fifo->buf[(fifo->head + 2) & fifo->mask];
+            call_data = &fifo->buf[(fifo->head + 3) & fifo->mask];
+        }
+
+        if (msg->recv_callback) {
+            msg->recv_callback(call_len, call_id_type, call_data);
         }
 #if MSG_ENABLE_STATISTICS
         ++msg->recv_success;
 #endif /* MSG_ENABLE_STATISTICS */
 
-    } else {
-/* 实际接收到的长度与数据包里的长度不一致 */
-#if MSG_ENABLE_STATISTICS
-        ++msg->recv_error;
-#endif /* MSG_ENABLE_STATISTICS */
+        /* 出队到下一个 */
+        fifo->head += frame_len;
+        --msg->fifo_element_len;
+    }
+}
+
+/**
+ * @brief 初始化消息队列
+ * 
+ * @param fifo_size 队列长度
+ * @return 消息队列
+ */
+static msg_fifo_t *msg_fifo_init(uint32_t fifo_size) {
+    msg_fifo_t *fifo = (msg_fifo_t *)MSG_MALLOC(sizeof(msg_fifo_t) + fifo_size);
+    if (fifo == NULL) {
+        return NULL;
     }
 
-    /* 头指针后移, 释放旧的头指针 */
-    msg->head = msg->head->next;
-    if (msg->head == NULL) {
-        msg->tail = NULL;
-    }
+    fifo->size = fifo_size;
+    fifo->mask = fifo_size - 1;
+    fifo->head = 0;
+    fifo->tail = 0;
+    fifo->new_frame = true;
 
-    MSG_FREE(current_head);
-
-#if MSG_ENABLE_STATISTICS
-    --msg->fifo_len;
-#endif /* MSG_ENABLE_STATISTICS */
+    return fifo;
 }

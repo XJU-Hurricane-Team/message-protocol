@@ -2,13 +2,12 @@
  * @file    msg_protocol.h
  * @author  Deadline039
  * @brief   消息协议
- * @version 2.2
+ * @version 2.3
  * @date    2024-03-01
  *
  *****************************************************************************
  *                             ##### 如何使用 ####
  * (#) 在`msg_id_t`枚举中添加要使用的数据通信类型
- *
  *
  * (#) 发送
  *      (##) 调用`message_register_send_uart`注册串口消息通讯句柄, 发送将会
@@ -35,6 +34,7 @@
  * 2025-03-13 |   2.0   | Deadline039 | 添加 FIFO
  * 2025-04-20 |   2.1   | Deadline039 | 添加转义
  * 2025-04-26 |   2.2   | Deadline039 | 修复缩容扩容错误
+ * 2025-05-10 |   2.3   | Deadline039 | 改用环形队列接收消息
  */
 
 #ifndef __MSG_PROTOCOL_H
@@ -45,26 +45,29 @@
 #include <stdlib.h>
 
 /* 帧结束标志 (End Of Frame), 注意需要避开数据头标识和长度 */
-#define MSG_EOF                0x7F
+#define MSG_EOF               0x7F
 /* 转义标识 (Escape), 注意需要避开头标识和长度 */
-#define MSG_ESC                0x8F
+#define MSG_ESC               0x8F
 
 /* 线程安全处理, 启用后会使用互斥信号量来管理全局变量, 仅支持 FreeRTOS. */
-#define MSG_ENABLE_RTOS        1
+#define MSG_ENABLE_RTOS       1
 
 /* 始能统计, 启用后统计接收成功错误计数, 队列最大深度等信息 */
-#define MSG_ENABLE_STATISTICS  1
+#define MSG_ENABLE_STATISTICS 1
 
 /* 内存分配相关 */
-#define MSG_MALLOC(x)          malloc(x)
-#define MSG_REALLOC(p, x)      realloc(p, x)
-#define MSG_FREE(p)            free(p)
+#define MSG_MALLOC(x)         malloc(x)
+#define MSG_REALLOC(p, x)     realloc(p, x)
+#define MSG_FREE(p)           free(p)
 
 /**
  * @brief 数据含义
  */
 typedef enum {
-    MSG_ID_DEMO,
+    MSG_ID_1, /*!< demo 1, TX2->RX3 */
+    MSG_ID_2, /*!< demo 2, TX3->RX4 */
+    MSG_ID_3, /*!< demo 3, TX4->RX5 */
+    MSG_ID_4, /*!< demo 4, TX5->RX2 */
 
     MSG_ID_RESERVE_LEN /*!< 保留位, 用于定义数据长度 */
 } msg_id_t;
@@ -105,7 +108,7 @@ void message_register_send_uart(msg_id_t msg_id, UART_HandleTypeDef *huart,
 void message_register_recv_callback(msg_id_t msg_id,
                                     msg_recv_callback_t msg_callback);
 void message_register_polling_uart(msg_id_t msg_id, UART_HandleTypeDef *huart,
-                                   uint32_t buf_size);
+                                   uint32_t buf_size, uint32_t fifo_size);
 
 void message_send_data(msg_id_t msg_id, msg_type_t data_type, uint8_t *data,
                        uint32_t data_len);
