@@ -23,7 +23,6 @@ void bsp_init(void) {
     uart5_init(115200);
     led_init();
     key_init();
-    bsp_crc32_init();
 }
 
 #ifdef USE_FULL_ASSERT

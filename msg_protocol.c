@@ -2,7 +2,7 @@
  * @file    msg_protocol.c
  * @author  Deadline039
  * @brief   消息协议以及收发
- * @version 2.3
+ * @version 2.4
  * @date    2024-03-01
  */
 
@@ -10,6 +10,10 @@
 
 #include <string.h>
 #include <stdbool.h>
+
+#if MSG_ENABLE_CRC8
+#include "crc/crc.h"
+#endif /* MSG_ENABLE_CRC8 */
 
 #if MSG_ENABLE_RTOS
 #include "FreeRTOS.h"
@@ -72,6 +76,9 @@ struct msg_instance {
 
     uint32_t recv_success; /*!< 接收成功计数 */
     uint32_t recv_error;   /*!< 接收错误计数 */
+#if MSG_ENABLE_CRC8
+    uint32_t crc_check_error; /*!< CRC 校验错误计数 */
+#endif                        /* MSG_ENABLE_CRC8 */
 
     uint32_t max_fifo_element_len; /*!< 最大队列元素个数 */
     uint32_t fifo_overflow;        /*!< 队列溢出清空计数 */
@@ -213,7 +220,7 @@ void message_send_data(msg_id_t msg_id, msg_type_t data_type, uint8_t *data,
     xSemaphoreTake(msg->send_buf_semp, portMAX_DELAY);
 #endif /* MSG_ENABLE_RTOS */
 
-    if (msg->send_buf_len <= data_len + 3) {
+    if (msg->send_buf_len <= data_len + 5) {
         /* 不够, 扩容当前数据长度的 2 倍 */
         uint8_t *new_buf = (uint8_t *)MSG_REALLOC(msg->send_buf, data_len * 2);
         if (new_buf == NULL) {
@@ -237,6 +244,11 @@ void message_send_data(msg_id_t msg_id, msg_type_t data_type, uint8_t *data,
     uint8_t *send_buf = (uint8_t *)msg->send_buf;
     uint32_t buf_idx = 0;
 
+#if MSG_ENABLE_CRC8
+    /* CRC8 校验结果 */
+    uint8_t crc8_value = calc_crc8(data, data_len);
+#endif /* MSG_ENABLE_CRC8 */
+
     /* 第一个字节, 高四位标记 ID, 低四位标记数据类型 */
     send_buf[buf_idx] = (uint8_t)(msg_id << 4) | data_type;
     ++buf_idx;
@@ -257,6 +269,14 @@ void message_send_data(msg_id_t msg_id, msg_type_t data_type, uint8_t *data,
         send_buf[buf_idx] = data[data_idx];
         ++buf_idx;
     }
+
+#if MSG_ENABLE_CRC8
+    /* 添加 CRC8 帧校验数据, 拆成两个字节, 每个字节小于 0x10, 这样可以避免转义 */
+    send_buf[buf_idx] = (crc8_value >> 4) & 0x0F;
+    ++buf_idx;
+    send_buf[buf_idx] = (crc8_value & 0x0F);
+    ++buf_idx;
+#endif /* MSG_ENABLE_CRC8 */
 
     /* 最后一个字节, 标记数据末尾 */
     send_buf[buf_idx] = MSG_EOF;
@@ -405,6 +425,13 @@ static void message_data_dequeue(struct msg_instance *msg) {
     /* 实际在缓冲区的位置指针 */
     uint32_t head, tail;
 
+#if MSG_ENABLE_CRC8
+    /* 接收到的 CRC8 校验值 */
+    uint8_t crc_recv;
+    /* 计算得到的 CRC8 校验值 */
+    uint8_t crc_value;
+#endif /* MSG_ENABLE_CRC8 */
+
     /* 队空条件: head == tail */
     while (fifo->head != fifo->tail) {
         /* 头存储的是帧长度 */
@@ -425,10 +452,18 @@ static void message_data_dequeue(struct msg_instance *msg) {
         head = fifo->head & fifo->mask;
         tail = (fifo->head + frame_len) & fifo->mask;
 
-        /* 验证数据包长度与实际接收长度是否一致, 数据包第二个字节是长度
-         * 1 byte 标识, 1 byte 长度, 1 byte 结束符, 1 byte FIFO 元素大小
+        /* 验证数据包长度与实际接收长度是否一致, 数据包第二个字节是长度 */
+#if MSG_ENABLE_CRC8
+        /* 1 byte 标识, 1 byte 长度, 1 byte 结束符, 1 byte FIFO 元素大小
+         * 2 byte CRC8 校验值
+         * 总共 6 byte. */
+        if ((frame_len - 6) != fifo->buf[(fifo->head + 2) & fifo->mask]) {
+#else  /* MSG_ENABLE_CRC8 */
+        /* 1 byte 标识, 1 byte 长度, 1 byte 结束符, 1 byte FIFO 元素大小
          * 总共 4 byte. */
         if ((frame_len - 4) != fifo->buf[(fifo->head + 2) & fifo->mask]) {
+#endif /* MSG_ENABLE_CRC8 */
+
             /* 不一致, 出队到下一个 */
             fifo->head += frame_len;
             --msg->fifo_element_len;
@@ -446,7 +481,11 @@ static void message_data_dequeue(struct msg_instance *msg) {
                 /* 复制后半段 */
                 memcpy(&msg->recv_buf[fifo->size - head], &fifo->buf[0], tail);
                 call_id_type = msg->recv_buf[1];
+#if MSG_ENABLE_CRC8
+                call_len = frame_len - 6;
+#else  /* MSG_ENABLE_CRC8 */
                 call_len = frame_len - 4;
+#endif /* MSG_ENABLE_CRC8 */
                 call_data = &msg->recv_buf[3];
             } else {
                 /* 空间不够, 不复制, 出队到下一个 */
@@ -463,6 +502,23 @@ static void message_data_dequeue(struct msg_instance *msg) {
             call_len = fifo->buf[(fifo->head + 2) & fifo->mask];
             call_data = &fifo->buf[(fifo->head + 3) & fifo->mask];
         }
+
+#if MSG_ENABLE_CRC8
+        /* 校验 CRC8 */
+        crc_value = calc_crc8(call_data, call_len);
+        /* 接收到的 CRC8 校验值 */
+        crc_recv =
+            (call_data[frame_len - 5] & 0x0F) | (call_data[frame_len - 6] << 4);
+        if (crc_value != crc_recv) {
+            /* 校验结果不一致, 出队到下一个 */
+            fifo->head += frame_len;
+            --msg->fifo_element_len;
+#if MSG_ENABLE_STATISTICS
+            ++msg->crc_check_error;
+#endif /* MSG_ENABLE_STATISTICS */
+            continue;
+        }
+#endif /* MSG_ENABLE_CRC8 */
 
         if (msg->recv_callback) {
             msg->recv_callback(call_len, call_id_type, call_data);
