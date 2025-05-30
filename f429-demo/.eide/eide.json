@@ -261,6 +261,9 @@
         "files": [
           {
             "path": "User/Utils/ring_fifo/ring_fifo.c"
+          },
+          {
+            "path": "User/Utils/crc/crc.c"
           }
         ],
         "folders": []
