@@ -2,7 +2,7 @@
  * @file    msg_protocol.h
  * @author  Deadline039
  * @brief   消息协议
- * @version 2.3
+ * @version 2.4
  * @date    2024-03-01
  *
  *****************************************************************************
@@ -35,6 +35,7 @@
  * 2025-04-20 |   2.1   | Deadline039 | 添加转义
  * 2025-04-26 |   2.2   | Deadline039 | 修复缩容扩容错误
  * 2025-05-10 |   2.3   | Deadline039 | 改用环形队列接收消息
+ * 2025-05-30 |   2.4   | Deadline039 | 添加 CRC8 校验
  */
 
 #ifndef __MSG_PROTOCOL_H
@@ -48,6 +49,8 @@
 #define MSG_EOF               0x7F
 /* 转义标识 (Escape), 注意需要避开头标识和长度 */
 #define MSG_ESC               0x8F
+/* 启用 CRC8 */
+#define MSG_ENABLE_CRC8       1
 
 /* 线程安全处理, 启用后会使用互斥信号量来管理全局变量, 仅支持 FreeRTOS. */
 #define MSG_ENABLE_RTOS       1
