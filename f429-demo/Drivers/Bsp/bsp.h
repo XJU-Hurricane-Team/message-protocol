@@ -20,8 +20,6 @@ extern "C" {
 #include "./key/key.h"
 #include "./led/led.h"
 
-#include "bsp_crc/bsp_crc32.h"
-
 void bsp_init(void);
 
 #ifdef __cplusplus

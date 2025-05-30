@@ -27,9 +27,6 @@
           },
           {
             "path": "Drivers/Bsp/bsp.c"
-          },
-          {
-            "path": "Drivers/Bsp/bsp_crc/bsp_crc32.c"
           }
         ],
         "folders": []
