@@ -1,6 +1,11 @@
 ## 概述
 
-将通信数据进行封装，允许注册不同类型的消息，并为每种消息设立独立的回调函数进行数据处理。
+将通信数据进行封装，允许注册不类型的消息，并为每种消息设立独立的回调函数进行数据处理。支持以下功能：
+
+- 透传
+- CRC8 校验
+- 发送缓冲区线程安全
+- 接收 FIFO 缓冲机制
 
 demo 程序详见：[f429-demo](https://github.com/XJU-Hurricane-Team/message-protocol/tree/main/f429-demo)
 
